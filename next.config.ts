@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+const backendOrigin = (process.env.BACKEND_URL || "https://our-project-bk.vercel.app")
+  .trim()
+  .replace(/\/api\/v1\/?$/i, "")
+  .replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
@@ -104,6 +109,14 @@ const nextConfig: NextConfig = {
         source: '/moderator/:path*',
         destination: '/moredator/:path*',
         permanent: false,
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${backendOrigin}/api/v1/:path*`,
       },
     ];
   },

@@ -11,7 +11,40 @@ import {
 } from '../shared/auth';
 import { SubscriptionPlan } from '../shared/plans';
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api/v1';
+export const API_BASE = (() => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const configured = (process.env.NEXT_PUBLIC_API_URL || '').trim();
+  const productionProxy = '/api/v1';
+
+  const normalize = (value: string): string => {
+    let normalized = value.trim().replace(/\/+$/, '');
+    if (!normalized) return '';
+    if (normalized === productionProxy) return productionProxy;
+    if (!/^https?:\/\//i.test(normalized)) return '';
+    if (isProduction && /localhost|127\.0\.0\.1/i.test(normalized)) return '';
+    if (isProduction && normalized.includes('api.rouletteaccuracy.com')) return '';
+    if (
+      isProduction &&
+      !/^https:\/\/(our-project-bk\.vercel\.app|(www\.)?accuracy\.tools)(\/|$)/i.test(normalized)
+    ) {
+      return '';
+    }
+    if (/\/api\/v1$/i.test(normalized)) {
+      return normalized;
+    }
+    if (/\/api$/i.test(normalized)) return `${normalized}/v1`;
+    return `${normalized}/api/v1`;
+  };
+
+  const configuredBase = normalize(configured);
+  if (configuredBase) return configuredBase;
+
+  // Production fallback is a same-origin Next.js proxy. This guarantees that a
+  // missing/stale Vercel build variable can never send browsers to localhost.
+  if (isProduction) return productionProxy;
+
+  return 'http://localhost:5050/api/v1';
+})();
 
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -63,6 +96,7 @@ function buildAuthHeaders(options: RequestInit = {}): Record<string, string> {
   const token = getStoredToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    Accept: 'application/json',
     ...((options.headers as Record<string, string>) || {})
   };
 
@@ -74,12 +108,29 @@ function buildAuthHeaders(options: RequestInit = {}): Record<string, string> {
 
 async function performFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = buildAuthHeaders(options);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    credentials: options.credentials || 'include',
-    ...options,
-    headers
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      credentials: options.credentials || 'include',
+      ...options,
+      headers,
+      signal: options.signal || controller.signal
+    });
+  } catch (err: any) {
+    const timedOut = err?.name === 'AbortError';
+    const requestError = new Error(
+      timedOut
+        ? 'The server took too long to respond. Please try again.'
+        : 'Unable to reach the server. Please check your internet connection and try again.'
+    ) as Error & { code?: string; status?: number };
+    requestError.code = timedOut ? 'CLIENT_TIMEOUT' : 'NETWORK_ERROR';
+    throw requestError;
+  } finally {
+    clearTimeout(timer);
+  }
 
   const data = await response.json().catch(() => ({}));
 
@@ -300,10 +351,15 @@ export interface PaymentHistoryResponse {
  */
 export async function downloadAuthenticatedFile(endpoint: string, filename: string): Promise<void> {
   const token = getStoredToken();
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: 'include'
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include'
+    });
+  } catch {
+    throw new Error('Unable to reach the server to download this file. Please check your connection.');
+  }
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
