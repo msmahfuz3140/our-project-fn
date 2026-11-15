@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://rouletteaccuracy.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.accuracy.tools'),
   title: 'Roulette Accuracy — Precision Intelligence for European Roulette',
   description: 'Direction-aware prediction engine for European Roulette across 20+ Evolution Gaming & Pragmatic Play live tables. Dealer Signature, n9 sector mapping and travel mathematics in one glass-clear workspace.',
   keywords: ['roulette accuracy', 'roulette prediction', 'european roulette tool', 'roulette algorithm', 'dealer signature strategy', 'evolution gaming tracker'],
