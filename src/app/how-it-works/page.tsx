@@ -21,15 +21,15 @@ export default function HowItWorksPage() {
   const steps = [
     {
       num: '01',
-      title: 'Create Account & Verify OTP',
-      desc: 'Register with either your email address or mobile phone number. Our backend dispatches a cryptographic 6-digit one-time verification code to confirm your identity securely.',
+      title: 'Create Account & Sign In',
+      desc: 'Register with your email address and password. Your session is protected by the existing authentication system and server-side rate limits.',
       icon: KeyRound,
       badge: 'ACCOUNT SETUP'
     },
     {
       num: '02',
       title: 'Choose a Subscription Plan',
-      desc: 'Select from our 5 authoritative plans ($150 for 15 Days up to $1,000 for 1 Year). Pay securely with crypto (USDT, BTC, ETH) via NOWPayments with automatic order snapshotting.',
+      desc: 'Select a plan from the live database catalogue. Pay securely with crypto through NOWPayments. The backend snapshots the authoritative price and duration before checkout.',
       icon: CreditCard,
       badge: 'NOWPAYMENTS CRYPTO'
     },
@@ -43,7 +43,7 @@ export default function HowItWorksPage() {
     {
       num: '04',
       title: 'Deploy Algorithmic Telemetry',
-      desc: 'Observe Offset Strategy pocket distances (0-3), Target Strategy streak metrics, and Dealer Signature ball travel lines computed on each spin in under 500 milliseconds.',
+      desc: 'Observe Offset Strategy pocket distances (0-3), Target Strategy streak metrics, and Dealer Signature ball travel lines computed by the authenticated backend engine on each spin.',
       icon: BarChart3,
       badge: 'REAL-TIME SIGNALS'
     },

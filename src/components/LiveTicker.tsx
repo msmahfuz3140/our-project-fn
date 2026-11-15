@@ -39,7 +39,7 @@ export function LiveTicker() {
     };
 
     void load();
-    const timer = setInterval(() => void load(), 45000);
+    const timer = setInterval(() => void load(), 60000);
     return () => {
       active = false;
       clearInterval(timer);

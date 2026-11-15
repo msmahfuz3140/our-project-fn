@@ -43,6 +43,8 @@ import { apiCache } from './api-cache';
 export interface RequestOptions extends RequestInit {
   bypassCache?: boolean;
   ttlMs?: number;
+  staleMs?: number;
+  persist?: boolean;
 }
 
 export function buildQueryString(params?: Record<string, any>): string {
@@ -166,9 +168,7 @@ async function requestRaw<T>(endpoint: string, options: RequestOptions = {}): Pr
     return apiCache.dedupe(
       cacheKey,
       () => performFetchRaw<T>(endpoint, options),
-      // Always ask for fresh live data; dedupe still prevents parallel
-      // identical requests from the same browser tab.
-      { ttlMs: 0, bypassCache: true }
+      { ttlMs: options.ttlMs, staleMs: options.staleMs ?? (token ? 0 : undefined), bypassCache: options.bypassCache, persist: options.persist }
     );
   }
 
@@ -185,7 +185,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     return apiCache.dedupe(
       cacheKey,
       () => performFetch<T>(endpoint, options),
-      { ttlMs: options.ttlMs, bypassCache: options.bypassCache }
+      {
+        ttlMs: options.ttlMs,
+        staleMs: options.staleMs ?? (token ? 0 : undefined),
+        bypassCache: options.bypassCache,
+        persist: options.persist ?? !token
+      }
     );
   }
 
@@ -199,27 +204,121 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 export interface PurchaseOrderResult {
   orderId: string;
   paymentId: string;
+  providerInvoiceId?: string;
   planId: string;
   planName: string;
   priceUsd: number;
   priceCents: number;
   status: string;
   checkoutUrl: string;
+  payAddress?: string;
+  payAmount?: number;
+  payCurrency: string;
+  paymentMode?: 'LIVE' | 'SANDBOX' | 'SIMULATION';
+  simulated?: boolean;
   createdAt: string;
 }
 
 export interface OrderDetails {
   orderId: string;
   paymentId: string;
+  providerPaymentId?: string;
+  providerInvoiceId?: string;
   planId: string;
   planName: string;
   priceUsd: number;
   priceCents: number;
+  priceCurrency?: string;
   duration: { unit: 'DAYS' | 'MONTHS'; value: number };
   durationDays: number;
   status: string;
+  providerStatus?: string;
+  isFulfilled?: boolean;
+  verified?: boolean;
+  signatureVerified?: boolean;
+  providerVerified?: boolean;
+  actuallyPaid?: number;
+  payAmount?: number;
+  payCurrency?: string;
+  paymentMethod?: string;
+  transactionId?: string;
   checkoutUrl?: string;
+  failureReason?: string;
+  paidAt?: string;
   createdAt: string;
+  updatedAt?: string;
+  subscription?: {
+    id: string;
+    status: string;
+    startDate?: string;
+    endDate?: string;
+    isRevoked?: boolean;
+    planId?: string;
+  } | null;
+}
+
+export interface PaymentHistoryItem {
+  orderId: string;
+  paymentId: string;
+  providerPaymentId?: string;
+  planId: string;
+  planName: string;
+  priceAmount: number;
+  priceCurrency: string;
+  priceCents: number;
+  payAmount?: number;
+  actuallyPaid?: number;
+  payCurrency: string;
+  paymentMethod?: string;
+  transactionId?: string;
+  status: string;
+  providerStatus?: string;
+  verified: boolean;
+  isFulfilled: boolean;
+  paidAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  subscription?: {
+    id: string;
+    status: string;
+    startDate?: string;
+    endDate?: string;
+  } | null;
+}
+
+export interface PaymentHistoryResponse {
+  payments: PaymentHistoryItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+
+/**
+ * Download a private CSV/file without ever putting the bearer token in a URL.
+ */
+export async function downloadAuthenticatedFile(endpoint: string, filename: string): Promise<void> {
+  const token = getStoredToken();
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error?.message || data?.message || `Download failed with status ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(objectUrl);
 }
 
 export const authClient = {
@@ -285,7 +384,7 @@ export const authClient = {
   },
 
   async getMe(): Promise<AuthUser> {
-    const res = await request<any>('/auth/me');
+    const res = await request<any>('/auth/me', { bypassCache: true, ttlMs: 0 });
     return res?.user || res;
   },
 
@@ -301,6 +400,10 @@ export const authClient = {
     return request<{ active: any; history: any[] }>('/subscriptions/my-subscription');
   },
 
+  async getMyDashboardSummary(): Promise<any> {
+    return request<any>('/dashboard/me', { bypassCache: true });
+  },
+
   async logout(): Promise<void> {
     try {
       await request('/auth/logout', { method: 'POST' });
@@ -313,7 +416,11 @@ export const authClient = {
 
   // Plan Management & Purchase Flow
   async getPlans(): Promise<SubscriptionPlan[]> {
-    return request<SubscriptionPlan[]>('/subscriptions/plans');
+    return request<SubscriptionPlan[]>('/subscriptions/plans', {
+      ttlMs: 60_000,
+      staleMs: 300_000,
+      persist: true
+    });
   },
 
   async createPurchaseOrder(planId: string, payCurrency = 'USDTTRC20'): Promise<PurchaseOrderResult> {
@@ -324,7 +431,21 @@ export const authClient = {
   },
 
   async getOrder(orderId: string): Promise<OrderDetails> {
-    return request<OrderDetails>(`/payments/order/${orderId}`);
+    return request<OrderDetails>(`/payments/order/${encodeURIComponent(orderId)}`);
+  },
+
+  async getPaymentStatus(identifier: string): Promise<OrderDetails> {
+    return request<OrderDetails>(`/payments/${encodeURIComponent(identifier)}`, {
+      bypassCache: true,
+      ttlMs: 0
+    });
+  },
+
+  async getPaymentHistory(params?: { page?: number; limit?: number }): Promise<PaymentHistoryResponse> {
+    return request<PaymentHistoryResponse>(`/payments/history${buildQueryString(params)}`, {
+      bypassCache: true,
+      ttlMs: 0
+    });
   },
 
   // Contact Inquiries
@@ -414,6 +535,10 @@ export const authClient = {
 
   async getAdminDashboardMetrics(bypassCache?: boolean): Promise<any> {
     return request<any>('/admin/dashboard-metrics', { bypassCache });
+  },
+
+  async getAdminSystemHealth(): Promise<any> {
+    return request<any>('/admin/system/health', { bypassCache: true });
   },
 
   async getAdminUsers(params?: Record<string, any>, bypassCache?: boolean): Promise<any> {
@@ -525,11 +650,19 @@ export const authClient = {
 
   async getAdminOrders(params?: Record<string, any>): Promise<any> {
     const qs = buildQueryString(params);
-    return request<any>(`/payments/admin/orders${qs}`);
+    return request<any>(`/payments/admin/orders${qs}`, { bypassCache: true });
   },
 
   async getAdminOrdersSummary(): Promise<any> {
-    return request<any>('/payments/admin/summary');
+    return request<any>('/payments/admin/summary', { bypassCache: true });
+  },
+
+  async getAdminPaymentHealth(): Promise<any> {
+    return request<any>('/payments/admin/health', { bypassCache: true });
+  },
+
+  async getAdminPaymentDetails(orderId: string): Promise<any> {
+    return request<any>(`/payments/admin/orders/${encodeURIComponent(orderId)}`, { bypassCache: true });
   },
 
   async getAdminPlans(): Promise<any[]> {
@@ -690,7 +823,22 @@ export const authClient = {
 
   // --- Phase 8: Tool Management & Operational Status ---
   async getPublicToolStatus(): Promise<any> {
-    return request<any>('/tool/status');
+    return request<any>('/tool/status', {
+      ttlMs: 60_000,
+      staleMs: 300_000,
+      persist: true
+    });
+  },
+
+  async trackReferralClick(input: { referralCode: string; path?: string; referrer?: string }): Promise<void> {
+    try {
+      await request('/referrals/click', {
+        method: 'POST',
+        body: JSON.stringify(input)
+      });
+    } catch {
+      // Click analytics must never block registration.
+    }
   },
 
   async getAdminToolSettings(): Promise<any> {
@@ -706,7 +854,11 @@ export const authClient = {
 
   // --- Phase 8: Website CMS & Settings ---
   async getPublicWebsiteSettings(): Promise<any> {
-    return request<any>('/settings/public');
+    return request<any>('/settings/public', {
+      ttlMs: 60_000,
+      staleMs: 300_000,
+      persist: true
+    });
   },
 
   async getAdminWebsiteSettings(): Promise<any> {
@@ -765,6 +917,17 @@ export const authClient = {
   async getAdminTickets(params?: Record<string, any>): Promise<any> {
     const qs = buildQueryString(params);
     return request<any>(`/admin/tickets${qs}`);
+  },
+
+  async getAdminContactMessages(params?: Record<string, any>): Promise<any> {
+    return request<any>(`/contact/admin/messages${buildQueryString(params)}`, { bypassCache: true });
+  },
+
+  async updateAdminContactMessage(id: string, data: { status: string; reason: string }): Promise<any> {
+    return request<any>(`/contact/admin/messages/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
   },
 
   async getAdminTicketDetails(ticketId: string): Promise<any> {

@@ -19,12 +19,20 @@ import { PremiumLockModal } from './PremiumLockModal';
 import { AccuracyWheel } from './AccuracyWheel';
 import { useAuth } from '../context/AuthContext';
 import { useDisclaimer } from '../context/DisclaimerContext';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 
 export function Hero() {
   const router = useRouter();
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const { requestToolAccess } = useDisclaimer();
+  const { settings, loading, error: settingsError } = usePublicSettings();
+
+  const heroTitle = settings?.homepageContent?.heroTitle || '';
+  const heroSubtitle = settings?.homepageContent?.heroSubtitle || '';
+  const titleParts = heroTitle.split('.').map((part) => part.trim()).filter(Boolean);
+  const primaryLine = titleParts[0] ? `${titleParts[0]}.` : '';
+  const secondaryLine = titleParts.slice(1).join('. ');
 
   const handleOpenTool = () => {
     if (user?.hasActiveSubscription || user?.role === 'SUPER_ADMIN') {
@@ -63,14 +71,35 @@ export function Hero() {
               </div>
 
               <h1 className="animate-rise delay-1 mt-7 font-display text-[2.35rem] font-black uppercase leading-[1.02] tracking-tight text-white sm:text-6xl lg:text-[4.15rem]">
-                <span className="block text-slate-200">Read the wheel.</span>
-                <span className="mt-1 block text-gold-shimmer">Time the pattern.</span>
+                {loading ? (
+                  <>
+                    <span className="block h-12 w-4/5 animate-pulse rounded bg-white/10" />
+                    <span className="mt-2 block h-12 w-3/5 animate-pulse rounded bg-amber-500/10" />
+                  </>
+                ) : settingsError ? (
+                  <>
+                    <span className="block text-slate-200">Live content unavailable.</span>
+                    <span className="mt-1 block text-amber-300">Please refresh.</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="block text-slate-200">{primaryLine || 'Live roulette intelligence'}</span>
+                    {secondaryLine && <span className="mt-1 block text-gold-shimmer">{secondaryLine}</span>}
+                  </>
+                )}
               </h1>
 
               <p className="animate-rise delay-2 mx-auto mt-6 max-w-xl font-body text-sm leading-relaxed text-slate-300 sm:text-base lg:mx-0 lg:text-lg">
-                <span className="font-semibold text-white">Roulette Accuracy</span> turns live
-                European wheel telemetry into a clear, direction-aware precision layer — dealer
-                rhythm, n9 sector mapping and travel mathematics in one place.
+                {loading ? (
+                  <span className="block h-16 animate-pulse rounded bg-white/5" />
+                ) : settingsError ? (
+                  <span className="text-amber-300">Homepage content could not be loaded from the database.</span>
+                ) : (
+                  <>
+                    <span className="font-semibold text-white">{settings?.siteName || 'Roulette Accuracy'}</span>{' '}
+                    {heroSubtitle}
+                  </>
+                )}
               </p>
 
               <div className="animate-rise delay-3 mt-8 flex flex-wrap items-center justify-center gap-3.5 lg:justify-start">

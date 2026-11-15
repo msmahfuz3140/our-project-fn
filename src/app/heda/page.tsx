@@ -91,8 +91,10 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      void refreshFinancialsQuietly();
-    }, 30000);
+      if (document.visibilityState === 'visible') {
+        void refreshFinancialsQuietly();
+      }
+    }, 60000);
     return () => clearInterval(timer);
   }, [refreshFinancialsQuietly]);
 

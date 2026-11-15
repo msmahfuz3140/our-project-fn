@@ -1,18 +1,36 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { CreditCard, Calendar, AlertCircle, RefreshCw, Zap, Shield } from 'lucide-react';
+import { authClient } from '../../lib/auth-client';
+import { SubscriptionPlan, formatCentsToUsd } from '../../shared/plans';
+import { LegalPolicyNotice } from '../../components/LegalPolicyNotice';
 
 export default function SubscriptionPolicyPage() {
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    authClient.getPlans()
+      .then((data) => {
+        if (active && Array.isArray(data)) setPlans(data);
+      })
+      .catch(() => null);
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#06080d] text-slate-100 flex flex-col selection:bg-amber-500 selection:text-black">
       <Navbar />
 
       <main className="flex-1 py-16 sm:py-24">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <LegalPolicyNotice policyKey="subscriptionPolicy" />
           {/* Header */}
           <div className="mb-12 border-b border-white/10 pb-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 mb-4 text-xs font-bold text-amber-400 font-display uppercase tracking-widest">
@@ -34,29 +52,25 @@ export default function SubscriptionPolicyPage() {
                 1. Authoritative Subscription Tiers & Pricing
               </h2>
               <p>
-                Roulette Accuracy maintains five authoritative subscription plans stored in decimal-safe integer cents:
+                Roulette Accuracy maintains its subscription catalogue in MongoDB with decimal-safe integer cents.
+                The live prices are:
               </p>
               <div className="rounded-xl border border-white/10 bg-[#0c1017] p-4 font-mono text-xs space-y-2">
-                <div className="flex justify-between border-b border-white/5 pb-1 text-slate-200">
-                  <span>15 Days Pass</span>
-                  <span className="text-amber-400 font-bold">$150.00 USD (15,000 cents)</span>
-                </div>
-                <div className="flex justify-between border-b border-white/5 pb-1 text-slate-200">
-                  <span>1 Month Pro</span>
-                  <span className="text-amber-400 font-bold">$200.00 USD (20,000 cents)</span>
-                </div>
-                <div className="flex justify-between border-b border-white/5 pb-1 text-slate-200">
-                  <span>3 Months Master</span>
-                  <span className="text-amber-400 font-bold">$450.00 USD (45,000 cents)</span>
-                </div>
-                <div className="flex justify-between border-b border-white/5 pb-1 text-slate-200">
-                  <span>6 Months Elite</span>
-                  <span className="text-amber-400 font-bold">$700.00 USD (70,000 cents)</span>
-                </div>
-                <div className="flex justify-between text-slate-200">
-                  <span>1 Year VIP Annual</span>
-                  <span className="text-purple-400 font-bold">$1,000.00 USD (100,000 cents)</span>
-                </div>
+                {plans.length === 0 ? (
+                  <p className="text-slate-500">Loading live plan catalogue…</p>
+                ) : (
+                  plans.map((plan, index) => (
+                    <div
+                      key={plan.id}
+                      className={`flex justify-between ${index < plans.length - 1 ? 'border-b border-white/5 pb-1' : ''} text-slate-200`}
+                    >
+                      <span>{plan.name}</span>
+                      <span className="text-amber-400 font-bold">
+                        {formatCentsToUsd(plan.priceCents)} USD ({plan.priceCents.toLocaleString()} cents)
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </section>
 
@@ -89,7 +103,7 @@ export default function SubscriptionPolicyPage() {
                 4. Cryptocurrency Payment Confirmation
               </h2>
               <p>
-                All subscription orders are settled via the NOWPayments crypto gateway. Subscriptions are activated only after the payment transaction is fully verified and confirmed on the blockchain with signed IPN validation. Simply navigating to a completion URL without completed payment does not activate tool access.
+                All subscription orders are settled via the NOWPayments crypto gateway. Subscriptions are activated only after the payment transaction reaches the provider's final successful settlement and the signed IPN passes HMAC-SHA512, amount, currency and provider re-verification checks. Simply navigating to a completion URL without completed payment does not activate tool access.
               </p>
             </section>
 

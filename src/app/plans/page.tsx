@@ -1,12 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { PlansSection } from '../../components/PlansSection';
-import { Check, X, Shield, Sparkles, HelpCircle } from 'lucide-react';
+import { Check, X } from 'lucide-react';
+import { authClient } from '../../lib/auth-client';
+import { SubscriptionPlan, formatCentsToUsd } from '../../shared/plans';
 
 export default function PlansPage() {
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    authClient.getPlans()
+      .then((data) => {
+        if (active && Array.isArray(data)) setPlans(data);
+      })
+      .catch(() => null);
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const comparisonRows = [
     { name: 'Live Table Surveillance (20+ Tables)', p15: true, p1m: true, p3m: true, p6m: true, p1y: true },
     { name: 'Real-Time Spin Tracking Feed', p15: true, p1m: true, p3m: true, p6m: true, p1y: true },
@@ -48,34 +64,35 @@ export default function PlansPage() {
                 <thead>
                   <tr className="border-b border-white/10 bg-white/5 font-display text-xs font-bold uppercase tracking-wider text-slate-300">
                     <th className="py-4 px-6">Capability / Feature</th>
-                    <th className="py-4 px-4 text-center">15 Days<br /><span className="text-slate-500 text-[10px]">$150</span></th>
-                    <th className="py-4 px-4 text-center text-amber-400">1 Month Pro<br /><span className="text-amber-500/80 text-[10px]">$200</span></th>
-                    <th className="py-4 px-4 text-center">3 Months<br /><span className="text-slate-500 text-[10px]">$450</span></th>
-                    <th className="py-4 px-4 text-center">6 Months<br /><span className="text-slate-500 text-[10px]">$700</span></th>
-                    <th className="py-4 px-4 text-center text-purple-400">1 Year VIP<br /><span className="text-purple-400/80 text-[10px]">$1,000</span></th>
+                    {plans.map((plan) => (
+                      <th key={plan.id} className="py-4 px-4 text-center">
+                        {plan.name}
+                        <br />
+                        <span className="text-[10px] text-amber-500/80">
+                          {formatCentsToUsd(plan.priceCents)}
+                        </span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 font-body text-xs text-slate-300">
-                  {comparisonRows.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3.5 px-6 font-medium text-slate-200">{row.name}</td>
-                      <td className="py-3.5 px-4 text-center">
-                        {row.p15 ? <Check className="h-4 w-4 text-emerald-400 mx-auto" /> : <X className="h-4 w-4 text-slate-600 mx-auto" />}
-                      </td>
-                      <td className="py-3.5 px-4 text-center bg-amber-500/5">
-                        {row.p1m ? <Check className="h-4 w-4 text-amber-400 mx-auto" /> : <X className="h-4 w-4 text-slate-600 mx-auto" />}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {row.p3m ? <Check className="h-4 w-4 text-emerald-400 mx-auto" /> : <X className="h-4 w-4 text-slate-600 mx-auto" />}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {row.p6m ? <Check className="h-4 w-4 text-emerald-400 mx-auto" /> : <X className="h-4 w-4 text-slate-600 mx-auto" />}
-                      </td>
-                      <td className="py-3.5 px-4 text-center bg-purple-500/5">
-                        {row.p1y ? <Check className="h-4 w-4 text-purple-400 mx-auto" /> : <X className="h-4 w-4 text-slate-600 mx-auto" />}
-                      </td>
-                    </tr>
-                  ))}
+                  {comparisonRows.map((row, idx) => {
+                    const flags = [row.p15, row.p1m, row.p3m, row.p6m, row.p1y];
+                    return (
+                      <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3.5 px-6 font-medium text-slate-200">{row.name}</td>
+                        {plans.map((plan, planIndex) => (
+                          <td key={plan.id} className="py-3.5 px-4 text-center">
+                            {flags[planIndex] ? (
+                              <Check className="h-4 w-4 text-emerald-400 mx-auto" />
+                            ) : (
+                              <X className="h-4 w-4 text-slate-600 mx-auto" />
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -1,37 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronDown, HelpCircle, MessageCircleQuestion } from 'lucide-react';
-
-const FAQS = [
-  {
-    q: 'How does the prediction engine generate numbers?',
-    a: 'The engine ingests live spin feeds from Evolution Gaming and Pragmatic Play tables, analyzing historical pocket distances (Offset Strategy), win/loss sequence momentum (Target Strategy), and ball travel trajectory consistency across rotations (Dealer Signature Strategy).'
-  },
-  {
-    q: 'Which cryptocurrencies are supported for subscription payment?',
-    a: 'We integrate with NOWPayments, supporting popular crypto assets including USDT (TRC20, ERC20), Bitcoin (BTC), Ethereum (ETH), Litecoin (LTC), Solana (SOL), and Binance Coin (BNB). Payments are verified on-chain via signed instant payment notifications (IPN).'
-  },
-  {
-    q: 'How fast does my subscription activate after payment?',
-    a: 'Subscriptions activate automatically within seconds of NOWPayments receiving the required blockchain network confirmations. The backend verifies the transaction and grants immediate premium access.'
-  },
-  {
-    q: 'How does the 50% Moderator Referral Commission work?',
-    a: 'Eligible Moderators appointed by Main Admins receive unique referral links. When referred users subscribe to any of the 5 subscription plans, 50% of the subscription value is calculated and credited to the moderator’s reporting ledger.'
-  },
-  {
-    q: 'Does this platform offer gambling or withdrawal functionality?',
-    a: 'No. This application is purely a statistical prediction analytics platform. There are no betting mechanics, no user wallet custody, and no withdrawal functionality in the platform.'
-  },
-  {
-    q: 'Can I test the platform before purchasing a full subscription?',
-    a: 'The 15 Days Pass ($150) is the entry tier and includes full live table access for 15 calendar days. The public site also explains the engine pipeline in detail, while authenticated values stay protected for active members.'
-  }
-];
+import React, { useMemo, useState } from 'react';
+import { ChevronDown, HelpCircle, MessageCircleQuestion, AlertCircle } from 'lucide-react';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 
 export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const { settings, loading, error } = usePublicSettings();
+
+  const faqs = useMemo(() => {
+    const items = settings?.faqItems || [];
+    return [...items]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .slice(0, 6);
+  }, [settings]);
 
   return (
     <section id="faq" className="relative overflow-hidden border-t border-white/[0.06] py-20 sm:py-24">
@@ -53,64 +35,81 @@ export function FaqSection() {
           </p>
         </div>
 
-        <div className="space-y-3">
-          {FAQS.map((faq, idx) => {
-            const isOpen = openIndex === idx;
-            return (
-              <div
-                key={idx}
-                className={`reveal glass overflow-hidden rounded-2xl transition-all duration-300 ${
-                  isOpen ? 'border-amber-500/30 shadow-[0_0_45px_-24px_rgba(245,158,11,0.45)]' : 'hover:border-white/20'
-                }`}
-              >
-                <button
-                  onClick={() => setOpenIndex(isOpen ? null : idx)}
-                  className="flex w-full items-center justify-between gap-4 p-5 text-left"
-                  aria-expanded={isOpen}
-                >
-                  <span className="flex items-start gap-3">
-                    <span
-                      className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border font-display text-[9px] font-black transition-colors ${
-                        isOpen
-                          ? 'border-amber-400/40 bg-amber-500/15 text-amber-300'
-                          : 'border-white/10 bg-white/[0.03] text-slate-500'
-                      }`}
-                    >
-                      {String(idx + 1).padStart(2, '0')}
-                    </span>
-                    <span className="font-display text-xs font-bold leading-relaxed text-white sm:text-sm">
-                      {faq.q}
-                    </span>
-                  </span>
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
-                      isOpen
-                        ? 'rotate-180 border-amber-400/40 bg-amber-500/15 text-amber-300'
-                        : 'border-white/10 bg-white/[0.03] text-slate-400'
-                    }`}
-                  >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </span>
-                </button>
-
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-16 animate-pulse rounded-2xl border border-white/10 bg-white/[0.03]" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-center text-sm text-amber-200">
+            <AlertCircle className="mx-auto mb-2 h-5 w-5" />
+            {error}
+          </div>
+        ) : faqs.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center text-sm text-slate-400">
+            No FAQ entries are published yet.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {faqs.map((faq, idx) => {
+              const isOpen = openIndex === idx;
+              return (
                 <div
-                  className={`grid transition-all duration-300 ease-out ${
-                    isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                  key={`${faq.question}-${idx}`}
+                  className={`reveal glass overflow-hidden rounded-2xl transition-all duration-300 ${
+                    isOpen ? 'border-amber-500/30 shadow-[0_0_45px_-24px_rgba(245,158,11,0.45)]' : 'hover:border-white/20'
                   }`}
                 >
-                  <div className="overflow-hidden">
-                    <div className="flex gap-3 border-t border-white/[0.06] px-5 pb-5 pt-4">
-                      <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-amber-400/70" />
-                      <p className="font-body text-xs leading-relaxed text-slate-300 sm:text-sm">
-                        {faq.a}
-                      </p>
+                  <button
+                    onClick={() => setOpenIndex(isOpen ? null : idx)}
+                    className="flex w-full items-center justify-between gap-4 p-5 text-left"
+                    aria-expanded={isOpen}
+                  >
+                    <span className="flex items-start gap-3">
+                      <span
+                        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border font-display text-[9px] font-black transition-colors ${
+                          isOpen
+                            ? 'border-amber-400/40 bg-amber-500/15 text-amber-300'
+                            : 'border-white/10 bg-white/[0.03] text-slate-500'
+                        }`}
+                      >
+                        {String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span className="font-display text-xs font-bold leading-relaxed text-white sm:text-sm">
+                        {faq.question}
+                      </span>
+                    </span>
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+                        isOpen
+                          ? 'rotate-180 border-amber-400/40 bg-amber-500/15 text-amber-300'
+                          : 'border-white/10 bg-white/[0.03] text-slate-400'
+                      }`}
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </span>
+                  </button>
+
+                  <div
+                    className={`grid transition-all duration-300 ease-out ${
+                      isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="flex gap-3 border-t border-white/[0.06] px-5 pb-5 pt-4">
+                        <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-amber-400/70" />
+                        <p className="font-body text-xs leading-relaxed text-slate-300 sm:text-sm">
+                          {faq.answer}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );

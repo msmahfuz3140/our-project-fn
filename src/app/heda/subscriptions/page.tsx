@@ -30,7 +30,7 @@ import {
   Copy,
   Check
 } from 'lucide-react';
-import { SUBSCRIPTION_PLANS, SubscriptionPlan } from '../../../shared/plans';
+import { SubscriptionPlan, formatCentsToUsd } from '../../../shared/plans';
 
 interface SubscriptionRecord {
   _id: string;
@@ -196,10 +196,8 @@ export default function AdminSubscriptionsPage() {
   }, [fetchSubscriptions]);
 
   useEffect(() => {
-    if (activeTab === 'PLANS') {
-      fetchPlans();
-    }
-  }, [activeTab, fetchPlans]);
+    void fetchPlans();
+  }, [fetchPlans]);
 
   const closeModal = () => {
     setModalType(null);
@@ -1129,9 +1127,9 @@ export default function AdminSubscriptionsPage() {
                 onChange={(e) => setGrantPlanId(e.target.value)}
                 className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
               >
-                {Object.values(SUBSCRIPTION_PLANS).map((p) => (
+                {plans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.durationDays} Days) — ${(p.priceCents / 100).toFixed(0)} Normal Value
+                    {p.name} ({p.durationDays} Days) — {formatCentsToUsd(p.priceCents)} Normal Value
                   </option>
                 ))}
               </select>

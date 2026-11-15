@@ -107,6 +107,8 @@ const NAV_SECTIONS: NavSection[] = [
           { name: 'All Payment Orders', href: '/heda/payments' },
           { name: 'Confirmed / Finished', href: '/heda/payments?status=FINISHED' },
           { name: 'Pending Confirmation', href: '/heda/payments?status=WAITING' },
+          { name: 'Underpaid / Review', href: '/heda/payments?status=REVIEW_REQUIRED', badge: 'CHECK' },
+          { name: 'Refunded', href: '/heda/payments?status=REFUNDED' },
           { name: 'Failed & Expired', href: '/heda/payments?status=FAILED' }
         ]
       },
@@ -146,6 +148,7 @@ const NAV_SECTIONS: NavSection[] = [
         icon: ShieldCheck,
         subItems: [
           { name: 'SOC Overview & Alerts', href: '/heda/security' },
+          { name: 'System Performance', href: '/heda/system', badge: 'LIVE' },
           { name: 'Audit Logs', href: '/heda/audit-logs' },
           { name: 'Dual-Approval Gate', href: '/heda/dual-approvals' }
         ]
@@ -161,6 +164,7 @@ const NAV_SECTIONS: NavSection[] = [
         subItems: [
           { name: 'Edit Support Info', href: '/heda/settings?tab=support', badge: 'TELEGRAM' },
           { name: 'Support Tickets', href: '/heda/tickets' },
+          { name: 'Contact Messages', href: '/heda/messages', badge: 'INBOX' },
           { name: 'Financial Reports & CSV', href: '/heda/reports' }
         ]
       }

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { authClient } from '../../lib/auth-client';
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight, ShieldCheck, AlertCircle, Gift, Sparkles } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -19,6 +20,30 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const incomingCode = (params.get('ref') || '').trim().toUpperCase();
+    if (!incomingCode) return;
+
+    setReferralCode(incomingCode);
+
+    try {
+      const storageKey = `ra_ref_clicked_${incomingCode}`;
+      if (sessionStorage.getItem(storageKey) !== '1') {
+        sessionStorage.setItem(storageKey, '1');
+        void authClient.trackReferralClick({
+          referralCode: incomingCode,
+          path: '/gerister',
+          referrer: document.referrer || undefined
+        });
+      }
+    } catch {
+      // Storage may be unavailable in privacy mode; registration still works.
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -28,8 +53,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
       return;
     }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { authClient, API_BASE } from '../../../lib/auth-client';
+import { authClient, downloadAuthenticatedFile } from '../../../lib/auth-client';
 import {
   Users2,
   Share2,
@@ -273,13 +273,12 @@ export default function AdminReferralsPage() {
     }
   };
 
-  const handleExportCsv = () => {
-    const token = typeof window !== 'undefined'
-      ? (localStorage.getItem('sloot_token') || localStorage.getItem('auth_token'))
-      : null;
-    const backendUrl = API_BASE;
-    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
-    window.open(`${backendUrl}/admin/referrals/export${tokenParam}`, '_blank');
+  const handleExportCsv = async () => {
+    try {
+      await downloadAuthenticatedFile('/admin/referrals/export', `referral-commissions-${Date.now()}.csv`);
+    } catch (err: any) {
+      setError(err?.message || 'Could not export referral commissions.');
+    }
   };
 
   return (

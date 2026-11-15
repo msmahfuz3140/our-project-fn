@@ -41,12 +41,14 @@ export default function ModeratorDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await authClient.getModeratorSelfDashboard();
+      const [data, commData, custData] = await Promise.all([
+        authClient.getModeratorSelfDashboard(),
+        authClient.getModeratorSelfCommissions({ limit: 50 }),
+        authClient.getModeratorSelfReferredUsers({ limit: 50 })
+      ]);
       setDashboardData(data);
-      const commData = await authClient.getModeratorSelfCommissions({ limit: 50 });
-      setCommissions(commData.commissions || []);
-      const custData = await authClient.getModeratorSelfReferredUsers({ limit: 50 });
-      setCustomers(custData.customers || []);
+      setCommissions(commData?.commissions || []);
+      setCustomers(custData?.customers || []);
     } catch (err: any) {
       setError(err?.message || 'Failed to load moderator dashboard telemetry');
     } finally {

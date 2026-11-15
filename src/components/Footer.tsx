@@ -3,29 +3,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { Activity, ShieldCheck, Send, Lock, Zap, ArrowUpRight, ArrowRight, Sparkles } from 'lucide-react';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 
 export function Footer() {
-  const [telegramUrl, setTelegramUrl] = React.useState('https://t.me/rouletteaccuracy_support');
-
-  React.useEffect(() => {
-    let mounted = true;
-    import('../lib/auth-client').then(({ authClient }) => {
-      authClient.getPublicWebsiteSettings()
-        .then((settings) => {
-          if (mounted && settings?.supportContact?.telegram) {
-            let tg = settings.supportContact.telegram.trim();
-            if (!tg.startsWith('http')) {
-              tg = tg.startsWith('@') ? `https://t.me/${tg.slice(1)}` : `https://t.me/${tg}`;
-            }
-            setTelegramUrl(tg);
-          }
-        })
-        .catch(() => {});
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { settings } = usePublicSettings();
+  const rawTelegram = settings?.supportContact?.telegram || settings?.socialLinks?.telegram || '';
+  let telegramUrl = 'https://t.me/rouletteaccuracy_support';
+  if (rawTelegram) {
+    telegramUrl = rawTelegram.startsWith('http')
+      ? rawTelegram
+      : rawTelegram.startsWith('@')
+        ? `https://t.me/${rawTelegram.slice(1)}`
+        : `https://t.me/${rawTelegram}`;
+  }
+  const siteName = settings?.siteName || 'Roulette Accuracy';
 
   return (
     <footer className="relative overflow-hidden border-t border-amber-500/10 bg-[#040609]/80 pt-16 pb-12">
@@ -81,14 +72,14 @@ export function Footer() {
             <Link href="/" className="group inline-flex items-center gap-3">
               <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0.5 bg-gradient-to-br from-amber-400 via-amber-600 to-amber-950 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-transform group-hover:scale-105">
                 <img
-                  src="/logo.png"
-                  alt="Roulette Accuracy Official Logo"
+                  src={settings?.logoUrl || '/logo.png'}
+                  alt={`${siteName} logo`}
                   className="h-full w-full scale-110 rounded-full object-cover"
                 />
               </div>
               <div className="flex flex-col">
                 <span className="font-display text-base font-black tracking-wider text-white">
-                  ROULETTE <span className="text-amber-400">ACCURACY</span>
+                  {siteName}
                 </span>
                 <span className="font-display text-[9px] uppercase tracking-widest text-amber-400/80 -mt-0.5">
                   Precision intelligence
@@ -204,9 +195,9 @@ export function Footer() {
 
         {/* Bottom Disclaimer & Copyright */}
         <div className="flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 font-display text-[11px] text-slate-500 sm:flex-row">
-          <p>© 2026 Roulette Accuracy. All rights reserved.</p>
+          <p>{settings?.footerContent?.copyrightText || `© ${siteName}. All rights reserved.`}</p>
           <p className="text-center uppercase tracking-widest text-slate-600 sm:text-right">
-            Single-zero European roulette intelligence • Strict zero-custody architecture
+            {settings?.footerContent?.disclaimerText || 'Single-zero European roulette intelligence • Strict zero-custody architecture'}
           </p>
         </div>
       </div>

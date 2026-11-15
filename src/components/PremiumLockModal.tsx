@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Lock, Sparkles, ArrowRight, X, ShieldAlert, Send } from 'lucide-react';
-import { PLANS_ARRAY } from '../shared/plans';
+import { formatCentsToUsd, SubscriptionPlan } from '../shared/plans';
 import { authClient } from '../lib/auth-client';
 
 interface PremiumLockModalProps {
@@ -13,20 +13,24 @@ interface PremiumLockModalProps {
 
 export function PremiumLockModal({ isOpen, onClose }: PremiumLockModalProps) {
   const [telegramUrl, setTelegramUrl] = useState('https://t.me/roulettetools_support');
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
 
   useEffect(() => {
     let mounted = true;
-    authClient.getPublicWebsiteSettings()
-      .then((settings) => {
-        if (mounted && settings?.supportContact?.telegram) {
-          let tg = settings.supportContact.telegram.trim();
-          if (!tg.startsWith('http')) {
-            tg = tg.startsWith('@') ? `https://t.me/${tg.slice(1)}` : `https://t.me/${tg}`;
-          }
-          setTelegramUrl(tg);
+    Promise.all([
+      authClient.getPublicWebsiteSettings().catch(() => null),
+      authClient.getPlans().catch(() => [])
+    ]).then(([settings, planData]) => {
+      if (!mounted) return;
+      if (settings?.supportContact?.telegram) {
+        let tg = settings.supportContact.telegram.trim();
+        if (!tg.startsWith('http')) {
+          tg = tg.startsWith('@') ? `https://t.me/${tg.slice(1)}` : `https://t.me/${tg}`;
         }
-      })
-      .catch(() => {});
+        setTelegramUrl(tg);
+      }
+      if (Array.isArray(planData)) setPlans(planData);
+    });
     return () => {
       mounted = false;
     };
@@ -85,7 +89,7 @@ export function PremiumLockModal({ isOpen, onClose }: PremiumLockModalProps) {
 
         {/* Quick Plan Highlights */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-          {PLANS_ARRAY.slice(0, 3).map((plan) => (
+          {plans.slice(0, 3).map((plan) => (
             <div
               key={plan.id}
               className={`rounded-xl border p-3 text-center ${
@@ -95,7 +99,7 @@ export function PremiumLockModal({ isOpen, onClose }: PremiumLockModalProps) {
               }`}
             >
               <p className="font-display text-xs font-bold text-white truncate">{plan.name}</p>
-              <p className="font-display text-base font-extrabold text-amber-400 mt-1">${plan.priceUsd}</p>
+              <p className="font-display text-base font-extrabold text-amber-400 mt-1">{formatCentsToUsd(plan.priceCents)}</p>
               <p className="font-display text-[9px] text-slate-400">{plan.durationDays} Days Access</p>
             </div>
           ))}

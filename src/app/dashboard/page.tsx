@@ -44,11 +44,13 @@ import { PremiumLockModal } from '../../components/PremiumLockModal';
 import { useDisclaimer } from '../../context/DisclaimerContext';
 import { NotificationBell } from '../../components/NotificationBell';
 import { ProfileView } from '../../components/ProfileView';
+import { PaymentHistory } from '../../components/PaymentHistory';
 
 type DashboardTab =
   | 'overview'
   | 'profile'
   | 'subscription'
+  | 'payments'
   | 'tool'
   | 'referral'
   | 'security'
@@ -80,6 +82,7 @@ export default function DashboardPage() {
 
   // Access status telemetry
   const [accessStatus, setAccessStatus] = useState<any>(null);
+  const [dashboardSummary, setDashboardSummary] = useState<any>(null);
   const [loadingAccess, setLoadingAccess] = useState(false);
   const [dashSecretCode, setDashSecretCode] = useState('');
   const [dashUnlockLoading, setDashUnlockLoading] = useState(false);
@@ -122,10 +125,17 @@ export default function DashboardPage() {
     if (!isAuthenticated) return;
     setLoadingAccess(true);
     try {
-      const res = await authClient.getAccessStatus();
-      setAccessStatus(res);
+      const summary = await authClient.getMyDashboardSummary();
+      setDashboardSummary(summary);
+      setAccessStatus(summary?.access || null);
     } catch {
-      // Non-blocking fallback to user context
+      // Fallback keeps the dashboard usable if the aggregate endpoint fails.
+      try {
+        const res = await authClient.getAccessStatus();
+        setAccessStatus(res);
+      } catch {
+        // Non-blocking fallback to user context
+      }
     } finally {
       setLoadingAccess(false);
     }
@@ -133,6 +143,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchAccess();
+  }, [fetchAccess]);
+
+  // Refresh subscription/access state when the user returns to the tab, so
+  // admin/manual subscription changes become visible without a hard reload.
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchAccess();
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
   }, [fetchAccess]);
 
   // Read URL query parameter ?tab=... to activate corresponding tab
@@ -143,6 +169,8 @@ export default function DashboardPage() {
         setActiveTab('profile');
       } else if (urlTab === 'subscription') {
         setActiveTab('subscription');
+      } else if (urlTab === 'payments') {
+        setActiveTab('payments');
       } else if (urlTab === 'security') {
         setActiveTab('security');
       } else if (urlTab === 'referral') {
@@ -436,6 +464,23 @@ export default function DashboardPage() {
                   {user.hasActiveSubscription && (
                     <span className="h-2 w-2 rounded-full bg-emerald-400" />
                   )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('payments');
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-xs font-semibold transition-all ${
+                    activeTab === 'payments'
+                      ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)] font-bold'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Payment History</span>
+                  </div>
                 </button>
 
                 <button
@@ -809,6 +854,12 @@ export default function DashboardPage() {
                           ? 'Real-time telemetry access enabled across all live roulette tables.'
                           : 'Activate a pass to start receiving real-time live spin predictions.'}
                       </p>
+                      {dashboardSummary?.paymentSummary && (
+                        <p className="mt-1 font-mono text-[10px] text-slate-500">
+                          {dashboardSummary.paymentSummary.successfulPayments || 0} successful payment(s) • $
+                          {(dashboardSummary.paymentSummary.totalSpentUsd || 0).toLocaleString()} lifetime
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -820,6 +871,15 @@ export default function DashboardPage() {
                         </span>
                         <span className="font-display text-2xl font-black text-amber-400">
                           {accessStatus?.daysRemaining ? `${accessStatus.daysRemaining} Days` : 'VIP Active'}
+                        </span>
+                        <span className="mt-1 block font-mono text-[10px] text-slate-400">
+                          Expires:{' '}
+                          {accessStatus?.expiresAtFormatted ||
+                            (accessStatus?.endDate
+                              ? new Date(accessStatus.endDate).toLocaleDateString()
+                              : user.subscriptionExpiresAt
+                              ? new Date(user.subscriptionExpiresAt).toLocaleDateString()
+                              : '—')}
                         </span>
                       </div>
                     ) : (
@@ -888,7 +948,7 @@ export default function DashboardPage() {
                       Instant Crypto IPN
                     </h4>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Automated server activation via NOWPayments on first blockchain confirmation.
+                      Automated server activation via signed NOWPayments IPN after final settlement verification.
                     </p>
                   </div>
                   <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
@@ -911,6 +971,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: PAYMENT HISTORY */}
+          {activeTab === 'payments' && (
+            <div className="animate-in fade-in duration-200">
+              <PaymentHistory />
             </div>
           )}
 

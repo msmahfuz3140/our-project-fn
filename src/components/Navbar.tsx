@@ -27,6 +27,7 @@ import { PremiumLockModal } from './PremiumLockModal';
 import { useDisclaimer } from '../context/DisclaimerContext';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../context/AuthContext';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 
 export function Navbar() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export function Navbar() {
   const [headerHeight, setHeaderHeight] = useState(56);
   const { user, isAuthenticated, logout } = useAuth();
   const { requestToolAccess } = useDisclaimer();
+  const { settings: publicSettings } = usePublicSettings();
 
   const headerRef = useRef<HTMLElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -152,15 +154,15 @@ export function Navbar() {
             <Link href="/" className="flex items-center gap-1.5 sm:gap-2.5 group shrink-0 min-w-0">
               <div className="relative flex h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full p-0.5 bg-gradient-to-br from-amber-400 via-amber-600 to-amber-950 shadow-[0_0_15px_rgba(245,158,11,0.35)] group-hover:shadow-[0_0_25px_rgba(245,158,11,0.65)] group-hover:scale-105 transition-all duration-300">
                 <img
-                  src="/logo.png"
-                  alt="Roulette Accuracy Official Emblem"
+                  src={publicSettings?.logoUrl || '/logo.png'}
+                  alt={`${publicSettings?.siteName || 'Roulette Accuracy'} emblem`}
                   className="h-full w-full scale-110 rounded-full object-cover"
                 />
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <span className="font-display text-xs sm:text-sm xl:text-[15px] 2xl:text-base font-black tracking-wider text-white whitespace-nowrap">
-                    ROULETTE <span className="text-amber-400">ACCURACY</span>
+                    {publicSettings?.siteName || 'Roulette Accuracy'}
                   </span>
                   <span className="hidden 2xl:inline-block rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 px-1.5 py-0.5 font-display text-[8px] font-black uppercase tracking-widest text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.25)] shrink-0">
                     VIP PRO

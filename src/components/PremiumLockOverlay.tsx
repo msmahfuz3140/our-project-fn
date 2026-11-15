@@ -15,7 +15,7 @@ import {
   Zap,
   Send
 } from 'lucide-react';
-import { PLANS_ARRAY } from '../shared/plans';
+import { formatCentsToUsd, SubscriptionPlan } from '../shared/plans';
 import { AccessStatusResponse } from '../shared/subscriptions';
 import { authClient } from '../lib/auth-client';
 import { KeyRound } from 'lucide-react';
@@ -40,20 +40,24 @@ export function PremiumLockOverlay({
   const [unlockError, setUnlockError] = useState('');
   const [unlockSuccess, setUnlockSuccess] = useState('');
   const [telegramUrl, setTelegramUrl] = useState('https://t.me/roulettetools_support');
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
 
   useEffect(() => {
     let mounted = true;
-    authClient.getPublicWebsiteSettings()
-      .then((settings) => {
-        if (mounted && settings?.supportContact?.telegram) {
-          let tg = settings.supportContact.telegram.trim();
-          if (!tg.startsWith('http')) {
-            tg = tg.startsWith('@') ? `https://t.me/${tg.slice(1)}` : `https://t.me/${tg}`;
-          }
-          setTelegramUrl(tg);
+    Promise.all([
+      authClient.getPublicWebsiteSettings().catch(() => null),
+      authClient.getPlans().catch(() => [])
+    ]).then(([settings, planData]) => {
+      if (!mounted) return;
+      if (settings?.supportContact?.telegram) {
+        let tg = settings.supportContact.telegram.trim();
+        if (!tg.startsWith('http')) {
+          tg = tg.startsWith('@') ? `https://t.me/${tg.slice(1)}` : `https://t.me/${tg}`;
         }
-      })
-      .catch(() => {});
+        setTelegramUrl(tg);
+      }
+      if (Array.isArray(planData)) setPlans(planData);
+    });
     return () => {
       mounted = false;
     };
@@ -260,7 +264,7 @@ export function PremiumLockOverlay({
             </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {PLANS_ARRAY.slice(0, 3).map((plan) => (
+            {plans.slice(0, 3).map((plan) => (
               <Link
                 key={plan.id}
                 href={`/plans#plan-${plan.id}`}
@@ -280,7 +284,7 @@ export function PremiumLockOverlay({
                 </p>
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="font-display text-2xl font-black text-white">
-                    ${plan.priceUsd}
+                    {formatCentsToUsd(plan.priceCents)}
                   </span>
                   <span className="font-display text-[11px] text-slate-400">
                     /{plan.durationDays}d

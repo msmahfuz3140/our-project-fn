@@ -1,11 +1,8 @@
 /**
- * Authoritative 5 Subscription Plans for the Roulette Prediction Platform
- * As defined in Section 7 of the Project Specification:
- * 1. 15 Days — $150 (15,000 cents)
- * 2. 1 Month — $200 (20,000 cents)
- * 3. 3 Months — $450 (45,000 cents)
- * 4. 6 Months — $700 (70,000 cents)
- * 5. 1 Year — $1,000 (100,000 cents)
+ * Subscription plan DTOs and display helpers.
+ *
+ * IMPORTANT: This file intentionally contains no plan catalogue. Prices,
+ * durations and visibility are loaded from MongoDB through the backend API.
  */
 
 export type DurationUnit = 'DAYS' | 'MONTHS';
@@ -30,112 +27,6 @@ export interface SubscriptionPlan {
   isVisible: boolean;
   displayOrder?: number;
 }
-
-export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
-  PLAN_15_DAYS: {
-    id: 'PLAN_15_DAYS',
-    name: '15 Days Pass',
-    badge: 'STARTER',
-    description: '15 calendar days full live access to European Roulette prediction feeds across 20+ tables.',
-    priceUsd: 150,
-    priceCents: 15000,
-    duration: { unit: 'DAYS', value: 15 },
-    durationDays: 15,
-    features: [
-      'Access to 20+ Evolution & Pragmatic live tables',
-      'Real-time live spin tracking',
-      'Offset Strategy prediction metrics',
-      'Pocket distance (0-3) indicators',
-      'Real-time hot streak alerts',
-      'Telegram community support'
-    ],
-    isActive: true,
-    isVisible: true
-  },
-  PLAN_1_MONTH: {
-    id: 'PLAN_1_MONTH',
-    name: '1 Month Pro',
-    badge: 'MOST POPULAR',
-    isPopular: true,
-    description: '1 full calendar month algorithmic coverage for disciplined session profitability.',
-    priceUsd: 200,
-    priceCents: 20000,
-    duration: { unit: 'MONTHS', value: 1 },
-    durationDays: 30,
-    features: [
-      'All 15 Days Pass features',
-      'Target Strategy pattern recognition',
-      'Win/Loss streak tracking (W/L sequences)',
-      'Momentum weakening exit signals',
-      'Real-time hot table detection',
-      'Priority Telegram support'
-    ],
-    isActive: true,
-    isVisible: true
-  },
-  PLAN_3_MONTHS: {
-    id: 'PLAN_3_MONTHS',
-    name: '3 Months Master',
-    badge: 'VALUE',
-    description: '3 full calendar months continuous access with enhanced volatility filters and dealer telemetry.',
-    priceUsd: 450,
-    priceCents: 45000,
-    duration: { unit: 'MONTHS', value: 3 },
-    durationDays: 90,
-    features: [
-      'All 1 Month Pro features',
-      'Dealer Signature Strategy unlocked',
-      'Ball travel line (Over/Under) triggers',
-      'TOP number placements (e.g. 0n4)',
-      'Multi-table simultaneous surveillance',
-      'VIP Telegram channel access'
-    ],
-    isActive: true,
-    isVisible: true
-  },
-  PLAN_6_MONTHS: {
-    id: 'PLAN_6_MONTHS',
-    name: '6 Months Elite',
-    badge: 'HIGH ROLLER',
-    description: '6 full calendar months high-volume subscription designed for advanced systematic players.',
-    priceUsd: 700,
-    priceCents: 70000,
-    duration: { unit: 'MONTHS', value: 6 },
-    durationDays: 180,
-    features: [
-      'All 3 Months Master features',
-      'Deep historical archive telemetry',
-      'Croupier rhythm phase analysis',
-      'Direct 1-on-1 strategy onboarding',
-      'Early access to new experimental models',
-      'Dedicated support manager'
-    ],
-    isActive: true,
-    isVisible: true
-  },
-  PLAN_1_YEAR: {
-    id: 'PLAN_1_YEAR',
-    name: '1 Year VIP Annual',
-    badge: 'MAXIMUM SAVINGS',
-    description: '12 full calendar months (1 year) unlimited VIP access at the lowest effective daily rate.',
-    priceUsd: 1000,
-    priceCents: 100000,
-    duration: { unit: 'MONTHS', value: 12 },
-    durationDays: 365,
-    features: [
-      'Permanent 365-day access to all prediction tools',
-      'All current and future algorithmic strategies',
-      'Ultra-low latency private prediction stream',
-      'Direct 1-on-1 founder support desk',
-      'Exclusive high-roller inner circle',
-      'Guaranteed 24/7 uptime SLA'
-    ],
-    isActive: true,
-    isVisible: true
-  }
-};
-
-export const PLANS_ARRAY: SubscriptionPlan[] = Object.values(SUBSCRIPTION_PLANS);
 
 export const MODERATOR_COMMISSION_RATE = 0.50; // 50% referral commission for moderators
 

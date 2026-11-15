@@ -37,7 +37,7 @@ import {
   Copy,
   Check
 } from 'lucide-react';
-import { SUBSCRIPTION_PLANS } from '../../../shared/plans';
+import { SubscriptionPlan, formatCentsToUsd } from '../../../shared/plans';
 
 interface UserItem {
   id: string;
@@ -45,7 +45,6 @@ interface UserItem {
   name: string;
   email: string;
   phone?: string;
-  plainPassword?: string;
   role: string;
   accountStatus: 'ACTIVE' | 'SUSPENDED' | 'BLOCKED' | 'DELETED';
   isEmailVerified: boolean;
@@ -124,6 +123,7 @@ export default function AdminUsersPage() {
   const [suspendDays, setSuspendDays] = useState(7);
   const [reasonInput, setReasonInput] = useState('');
   const [subPlanId, setSubPlanId] = useState('15_days');
+  const [adminPlans, setAdminPlans] = useState<SubscriptionPlan[]>([]);
   const [extValue, setExtValue] = useState(30);
   const [extUnit, setExtUnit] = useState<'days' | 'months' | 'years'>('days');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -133,7 +133,6 @@ export default function AdminUsersPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
-  const [tableShowPassword, setTableShowPassword] = useState<Record<string, boolean>>({});
 
   // Staff creation states
   const [staffRole, setStaffRole] = useState<'SUPER_ADMIN' | 'MODERATOR'>('SUPER_ADMIN');
@@ -192,9 +191,22 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
+  useEffect(() => {
+    let active = true;
+    authClient
+      .getAdminPlans()
+      .then((plans) => {
+        if (active && Array.isArray(plans)) setAdminPlans(plans);
+      })
+      .catch(() => null);
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const openViewModal = async (u: UserItem) => {
     setSelectedUser(u);
-    setEditPassword(u.plainPassword || '');
+    setEditPassword('');
     setShowPassword(false);
     setCopiedPassword(false);
     setActiveModal('VIEW');
@@ -203,9 +215,6 @@ export default function AdminUsersPage() {
       const targetId = (u.id || u._id)!;
       const res = await authClient.getAdminUserDetails(targetId);
       setDetailedUser(res);
-      if (res?.user?.plainPassword) {
-        setEditPassword(res.user.plainPassword);
-      }
     } catch (err: any) {
       setActionError(err.message || 'Failed to load full user details');
     } finally {
@@ -218,7 +227,7 @@ export default function AdminUsersPage() {
     setEditName(u.name || '');
     setEditPhone(u.phone || '');
     setEditRole(u.role || 'USER');
-    setEditPassword(u.plainPassword || '');
+    setEditPassword('');
     setShowPassword(false);
     setEditCommissionRate(u.moderatorCommissionRate ?? 10);
     setEditIsEmailVerified(!!u.isEmailVerified);
@@ -389,20 +398,10 @@ export default function AdminUsersPage() {
       const targetId = (selectedUser.id || selectedUser._id)!;
       await authClient.updateAdminUserProfile(targetId, {
         password: editPassword.trim(),
-        reason: 'Admin updated user password from profile view'
+        reason: 'Admin set a new user password from profile view'
       });
-      setActionSuccess(`Password updated and saved to MongoDB for ${selectedUser.email}!`);
-      if (detailedUser?.user) {
-        setDetailedUser({
-          ...detailedUser,
-          user: { ...detailedUser.user, plainPassword: editPassword.trim() }
-        });
-      }
-      setUsers((prev) =>
-        prev.map((usr) =>
-          (usr.id === targetId || usr._id === targetId) ? { ...usr, plainPassword: editPassword.trim() } : usr
-        )
-      );
+      setActionSuccess(`Password updated for ${selectedUser.email}. The new password is hashed and is not stored in readable form.`);
+      setEditPassword('');
       authClient.clearCache();
     } catch (err: any) {
       setActionError(err.message || 'Failed to update user password');
@@ -413,9 +412,11 @@ export default function AdminUsersPage() {
 
   const generateRandomUserPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    const bytes = new Uint32Array(16);
+    crypto.getRandomValues(bytes);
     let pwd = '';
-    for (let i = 0; i < 12; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < 16; i++) {
+      pwd += chars.charAt(bytes[i] % chars.length);
     }
     setEditPassword(pwd);
     setShowPassword(true);
@@ -1042,28 +1043,6 @@ export default function AdminUsersPage() {
                               </span>
                             )}
                           </div>
-                          {/* User Password quick preview */}
-                          <div className="flex items-center gap-1.5 text-[11px] font-mono">
-                            <span className="text-slate-500 text-[10px] uppercase font-sans">Pass:</span>
-                            {u.plainPassword ? (
-                              <div className="flex items-center gap-1 text-amber-400/90 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                                <span>{tableShowPassword[u.id] ? u.plainPassword : '••••••••'}</span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setTableShowPassword((prev) => ({ ...prev, [u.id]: !prev[u.id] }));
-                                  }}
-                                  className="text-slate-400 hover:text-white ml-0.5"
-                                  title={tableShowPassword[u.id] ? 'Hide' : 'Reveal password'}
-                                >
-                                  {tableShowPassword[u.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-slate-600 text-[10px] italic">Not set (legacy)</span>
-                            )}
-                          </div>
                           {u.phone && (
                             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
                               <span>{u.phone}</span>
@@ -1337,17 +1316,17 @@ export default function AdminUsersPage() {
                     <div className="flex items-center gap-2">
                       <Lock className="h-4 w-4 text-amber-400" />
                       <h4 className="font-display text-sm font-bold uppercase tracking-wider text-amber-300">
-                        Account Password & Direct Database Editing
+                        Set a New Account Password
                       </h4>
                     </div>
                     <span className="text-[11px] font-mono text-slate-400">
-                      Changes synchronize directly to MongoDB
+                      Write-only · bcrypt hashed · never retrievable
                     </span>
                   </div>
 
                   <div className="space-y-3">
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                      User Registration Password (Plain Text & Hashed)
+                      New Password (leave blank to keep the current password)
                     </label>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <div className="relative flex-1">
@@ -1355,7 +1334,8 @@ export default function AdminUsersPage() {
                           type={showPassword ? 'text' : 'password'}
                           value={editPassword}
                           onChange={(e) => setEditPassword(e.target.value)}
-                          placeholder="No plain password on legacy account (Enter new password)"
+                          placeholder="Enter a new password"
+                          autoComplete="new-password"
                           className="w-full rounded-xl border border-slate-700 bg-slate-950/90 pl-3.5 pr-20 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
                         />
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -1410,9 +1390,10 @@ export default function AdminUsersPage() {
                     </div>
 
                     <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <span>💡</span>
+                      <span>🔒</span>
                       <span>
-                        Editing and saving here updates both the readable password and the encrypted bcrypt hash in MongoDB, allowing immediate login with the new password.
+                        Saving a new password stores only a bcrypt hash. Plaintext passwords are never stored, logged,
+                        returned by APIs, or displayed in this admin panel.
                       </span>
                     </p>
                   </div>
@@ -1647,14 +1628,15 @@ export default function AdminUsersPage() {
             {/* Password Field */}
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
-                Account Password (Visible & Editable)
+                Set New Password (optional, write-only)
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={editPassword}
                   onChange={(e) => setEditPassword(e.target.value)}
-                  placeholder="Enter new password to change in DB"
+                  placeholder="Leave blank to keep the current password"
+                  autoComplete="new-password"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 pl-3.5 pr-20 py-2 text-sm font-mono text-white focus:border-amber-500 focus:outline-none"
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -1677,7 +1659,7 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <p className="mt-1 text-[11px] text-slate-500">
-                Updating this saves both the readable password and the encrypted bcrypt hash to MongoDB.
+                Only a bcrypt hash is stored. The server never returns or displays the existing password.
               </p>
             </div>
 
@@ -1965,9 +1947,9 @@ export default function AdminUsersPage() {
                 onChange={(e) => setSubPlanId(e.target.value)}
                 className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
               >
-                {Object.values(SUBSCRIPTION_PLANS).map((p) => (
+                {adminPlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.durationDays} Days) — ${(p.priceCents / 100).toFixed(0)} Normal Value
+                    {p.name} ({p.durationDays} Days) — {formatCentsToUsd(p.priceCents)} Normal Value
                   </option>
                 ))}
               </select>

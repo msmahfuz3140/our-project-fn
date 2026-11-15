@@ -48,8 +48,19 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // 30s poll
-    return () => clearInterval(interval);
+    // Notifications are not latency-critical. Poll infrequently and refresh on
+    // focus to avoid constant database load from every open tab.
+    const interval = setInterval(fetchNotifications, 120000);
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') void fetchNotifications();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
   }, []);
 
   // Close dropdown on outside click

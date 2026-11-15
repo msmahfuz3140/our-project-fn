@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { authClient } from '../../../lib/auth-client';
+import { authClient, downloadAuthenticatedFile } from '../../../lib/auth-client';
+import { SubscriptionPlan, formatCentsToUsd } from '../../../shared/plans';
 import {
   BarChart3,
   DollarSign,
@@ -34,7 +35,20 @@ export default function AdminReportsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [planFilter, setPlanFilter] = useState('');
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    authClient.getAdminPlans()
+      .then((data) => {
+        if (active && Array.isArray(data)) setPlans(data);
+      })
+      .catch(() => null);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
@@ -42,7 +56,8 @@ export default function AdminReportsPage() {
     try {
       const data = await authClient.getReportsSummary({
         startDate: startDate || undefined,
-        endDate: endDate || undefined
+        endDate: endDate || undefined,
+        planId: planFilter || undefined
       });
       setSummary(data);
     } catch (err: any) {
@@ -50,7 +65,7 @@ export default function AdminReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, planFilter]);
 
   useEffect(() => {
     fetchSummary();
@@ -103,8 +118,24 @@ export default function AdminReportsPage() {
     setPlanFilter('');
   };
 
-  const fin = summary?.financials;
-  const ops = summary?.operational;
+  const fin = summary?.finances;
+  const ops = summary
+    ? {
+        totalUsersRegistered: summary.users?.totalRegistrations || 0,
+        activeSubscriptionsCount: summary.subscriptions?.totalActive || 0,
+        expiredSubscriptionsCount: summary.subscriptions?.totalExpired || 0,
+        confirmedOrdersCount: summary.finances?.confirmedOrdersCount || 0,
+        failedOrdersCount: summary.finances?.failedOrdersCount || 0,
+        planDistribution: summary.subscriptions?.planDistribution || [],
+        topModerators: summary.moderatorPerformance || []
+      }
+    : null;
+  const referralSalesCount = Array.isArray(ops?.topModerators)
+    ? ops.topModerators.reduce((sum: number, mod: any) => sum + (mod.attributedSalesCount || 0), 0)
+    : 0;
+  const referralSalesVolumeUsd = Array.isArray(ops?.topModerators)
+    ? ops.topModerators.reduce((sum: number, mod: any) => sum + (mod.attributedRevenueUsd || 0), 0)
+    : 0;
 
   return (
     <div className="space-y-8 animate-fade-in pb-16">
@@ -170,11 +201,11 @@ export default function AdminReportsPage() {
                 className="rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 font-display text-xs text-slate-300 focus:border-amber-500 focus:outline-none"
               >
                 <option value="">All Subscription Plans</option>
-                <option value="15-days">15 Days ($150)</option>
-                <option value="1-month">1 Month ($200)</option>
-                <option value="3-months">3 Months ($450)</option>
-                <option value="6-months">6 Months ($700)</option>
-                <option value="1-year">1 Year ($1,000)</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name} ({formatCentsToUsd(plan.priceCents)})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -319,7 +350,7 @@ export default function AdminReportsPage() {
                   </div>
                 </div>
                 <div className="font-display text-2xl sm:text-3xl font-black text-slate-300">
-                  -${fin?.estimatedPaymentFeesUsd?.toFixed(2) || '0.00'}
+                  -${fin?.estimatedFeesUsd?.toFixed(2) || '0.00'}
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2">
                   Estimated merchant and blockchain settlement fees (~1.0%).
@@ -374,8 +405,8 @@ export default function AdminReportsPage() {
                   Operating Expenses & Net Profit
                 </span>
                 <div className="font-display text-xs font-mono font-bold text-slate-400 mt-2">
-                  {fin?.netProfitUsd !== null && fin?.netProfitUsd !== undefined
-                    ? `$${fin.netProfitUsd.toFixed(2)}`
+                  {fin?.netRevenueUsd !== null && fin?.netRevenueUsd !== undefined
+                    ? `$${fin.netRevenueUsd.toFixed(2)}`
                     : 'Requires Off-Chain Operational Input'}
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1">
@@ -445,10 +476,10 @@ export default function AdminReportsPage() {
                   Referral Sales
                 </span>
                 <span className="font-display text-2xl font-black text-purple-400 mt-1 block">
-                  {ops?.referralSalesCount || 0}
+                  {referralSalesCount}
                 </span>
                 <span className="font-mono text-[10px] text-slate-400 block mt-0.5">
-                  (${ops?.referralSalesVolumeUsd?.toFixed(0) || '0'})
+                  (${referralSalesVolumeUsd.toFixed(0)})
                 </span>
               </div>
             </div>
@@ -464,29 +495,24 @@ export default function AdminReportsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-              {[
-                { id: '15-days', label: '15 Days', price: '$150' },
-                { id: '1-month', label: '1 Month', price: '$200' },
-                { id: '3-months', label: '3 Months', price: '$450' },
-                { id: '6-months', label: '6 Months', price: '$700' },
-                { id: '1-year', label: '1 Year', price: '$1,000' }
-              ].map((tier) => {
-                const count = ops?.planDistribution?.[tier.id] || 0;
-                const totalActive = ops?.activeSubscriptionsCount || 1;
-                const percentage = totalActive > 0 ? ((count / totalActive) * 100).toFixed(0) : '0';
+              {(ops?.planDistribution || []).map((tier: any) => {
+                const count = tier.activeCount || 0;
+                const percentage = tier.percentage || 0;
+                const plan = plans.find((item) => item.id === tier.planId);
+                const price = plan ? formatCentsToUsd(plan.priceCents) : '';
 
                 return (
                   <div
-                    key={tier.id}
+                    key={tier.planId}
                     className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0d1424] to-[#070b14] p-4 flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="font-display text-xs font-bold uppercase tracking-wider text-white">
-                          {tier.label}
+                          {tier.planName || tier.planId}
                         </span>
                         <span className="font-mono text-xs text-amber-400 font-bold">
-                          {tier.price}
+                          {price}
                         </span>
                       </div>
                       <div className="font-display text-2xl font-black text-white mt-3">
@@ -554,20 +580,20 @@ export default function AdminReportsPage() {
                           </td>
                           <td className="px-4 py-3">
                             <span className="rounded bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-amber-400 font-bold">
-                              {mod.code || 'N/A'}
+                              {mod.referralCode || 'N/A'}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center text-white font-bold">
-                            {mod.referralCount || 0}
+                            {mod.attributedSalesCount || 0}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-emerald-400">
-                            ${mod.salesVolumeUsd?.toFixed(2) || '0.00'}
+                            ${mod.attributedRevenueUsd?.toFixed(2) || '0.00'}
                           </td>
                           <td className="px-4 py-3 text-right text-amber-400">
                             ${mod.pendingCommissionUsd?.toFixed(2) || '0.00'}
                           </td>
                           <td className="px-4 py-3 text-right text-emerald-400 font-bold">
-                            ${mod.approvedCommissionUsd?.toFixed(2) || '0.00'}
+                            ${mod.creditedCommissionUsd?.toFixed(2) || '0.00'}
                           </td>
                         </tr>
                       ))

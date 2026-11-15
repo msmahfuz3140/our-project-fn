@@ -16,9 +16,10 @@ import {
   Gem,
   TrendingUp,
   Clock,
-  TableProperties
+  TableProperties,
+  AlertTriangle
 } from 'lucide-react';
-import { PLANS_ARRAY, SubscriptionPlan, formatCentsToUsd } from '../shared/plans';
+import { SubscriptionPlan, formatCentsToUsd } from '../shared/plans';
 import { authClient } from '../lib/auth-client';
 import { useAuth } from '../context/AuthContext';
 
@@ -81,7 +82,7 @@ const TIER_CONFIGS: Record<string, TierConfig> = {
     btnGradient: 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 border-emerald-400',
     btnTextColor: 'text-black font-black',
     btnShadow: 'shadow-[0_0_20px_rgba(16,185,129,0.25)]',
-    exclusivePerk: 'Save $150 vs monthly renew'
+    exclusivePerk: 'Lower effective monthly rate'
   },
   PLAN_6_MONTHS: {
     icon: Gem,
@@ -96,7 +97,7 @@ const TIER_CONFIGS: Record<string, TierConfig> = {
     btnGradient: 'bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-600 hover:brightness-110 border-indigo-400',
     btnTextColor: 'text-white font-black',
     btnShadow: 'shadow-[0_0_20px_rgba(99,102,241,0.3)]',
-    exclusivePerk: 'Save $500 vs monthly renew'
+    exclusivePerk: 'Best value for high-volume play'
   },
   PLAN_1_YEAR: {
     icon: Crown,
@@ -155,26 +156,32 @@ const CURATED_FEATURES: Record<string, string[]> = {
 export function PlansSection() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const [plans, setPlans] = useState<SubscriptionPlan[]>(PLANS_ARRAY);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState<boolean>(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
   const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'monthly' | 'vip'>('all');
 
+  const loadPlans = async () => {
+    setPlansLoading(true);
+    setPlansError(null);
+    try {
+      const data = await authClient.getPlans();
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error('No subscription plans are currently published.');
+      }
+      setPlans(data);
+    } catch (err: any) {
+      setPlansError(err?.message || 'Unable to load subscription plans. Please retry.');
+      setPlans([]);
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
-    authClient
-      .getPlans()
-      .then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setPlans(data);
-        }
-      })
-      .catch(() => {
-        // Silently preserve initial PLANS_ARRAY
-      });
-    return () => {
-      isMounted = false;
-    };
+    void loadPlans();
   }, []);
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
@@ -214,10 +221,10 @@ export function PlansSection() {
   const filteredPlans = plans.filter((plan) => {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'monthly') {
-      return plan.id === 'PLAN_15_DAYS' || plan.id === 'PLAN_1_MONTH';
+      return plan.durationDays <= 31;
     }
     if (activeFilter === 'vip') {
-      return plan.id === 'PLAN_3_MONTHS' || plan.id === 'PLAN_6_MONTHS' || plan.id === 'PLAN_1_YEAR';
+      return plan.durationDays > 31;
     }
     return true;
   });
@@ -248,7 +255,7 @@ export function PlansSection() {
           </h2>
 
           <p className="font-body text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl mx-auto">
-            Fixed USD valuation with real-time decimal crypto checkout via NOWPayments. Instant automated activation upon first blockchain confirmation.
+            Fixed USD valuation with real-time decimal crypto checkout via NOWPayments. Premium unlocks automatically after the signed IPN reaches final settlement.
           </p>
 
           {/* Duration Category Filter Switcher */}
@@ -316,7 +323,37 @@ export function PlansSection() {
               : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
           }`}
         >
-          {filteredPlans.map((plan) => {
+          {plansLoading ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={`plan-skeleton-${index}`}
+                className="min-h-[420px] animate-pulse rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+              >
+                <div className="h-9 w-9 rounded-xl bg-white/10" />
+                <div className="mt-4 h-5 w-3/4 rounded bg-white/10" />
+                <div className="mt-2 h-3 w-1/2 rounded bg-white/5" />
+                <div className="mt-6 h-10 w-2/3 rounded bg-amber-500/10" />
+                <div className="mt-6 space-y-2">
+                  <div className="h-3 w-full rounded bg-white/5" />
+                  <div className="h-3 w-5/6 rounded bg-white/5" />
+                  <div className="h-3 w-4/6 rounded bg-white/5" />
+                </div>
+              </div>
+            ))
+          ) : plansError ? (
+            <div className="col-span-full rounded-2xl border border-rose-500/30 bg-rose-500/10 p-8 text-center">
+              <AlertTriangle className="mx-auto mb-3 h-7 w-7 text-rose-400" />
+              <h3 className="font-display text-lg font-black uppercase text-white">Plans Could Not Be Loaded</h3>
+              <p className="mx-auto mt-2 max-w-md text-xs text-rose-200">{plansError}</p>
+              <button
+                type="button"
+                onClick={() => void loadPlans()}
+                className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-5 py-2 font-display text-xs font-bold uppercase tracking-wider text-rose-200 hover:bg-rose-500/20"
+              >
+                Retry Plans
+              </button>
+            </div>
+          ) : filteredPlans.map((plan) => {
             const isPopular = plan.isPopular;
             const isAnnual = plan.id === 'PLAN_1_YEAR';
             const isProcessing = loadingPlanId === plan.id;
@@ -394,7 +431,7 @@ export function PlansSection() {
 
                     <div className="mt-2 flex items-center justify-between gap-1 text-[10px]">
                       <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-0.5 font-mono font-medium text-slate-300">
-                        {config.dailyRate}
+                        {formatCentsToUsd(Math.max(1, Math.round(plan.priceCents / Math.max(1, plan.durationDays))))} / day
                       </span>
                       <span className="font-display text-[9px] font-bold uppercase tracking-widest text-emerald-400">
                         Zero KYC
@@ -454,7 +491,7 @@ export function PlansSection() {
                   </button>
 
                   <p className="text-center font-display text-[8px] uppercase tracking-widest text-slate-500 mt-2">
-                    Instant Auto-Activation • Zero KYC
+                    Verified Auto-Activation • Zero KYC
                   </p>
                 </div>
               </div>
@@ -487,7 +524,7 @@ export function PlansSection() {
                   NOWPayments Protocol
                 </h4>
                 <p className="font-body text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                  Cryptographically signed IPN webhook verification with exact integer cents precision. Zero rate fluctuations during checkout.
+                  Cryptographically signed IPN webhook verification with exact integer cents precision. Premium unlocks only after final provider settlement.
                 </p>
               </div>
             </div>

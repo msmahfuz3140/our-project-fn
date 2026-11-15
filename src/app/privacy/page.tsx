@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
+import { LegalPolicyNotice } from '../../components/LegalPolicyNotice';
 import { ShieldCheck, Lock, EyeOff, Server, FileText } from 'lucide-react';
 
 export default function PrivacyPage() {
@@ -13,6 +14,7 @@ export default function PrivacyPage() {
 
       <main className="flex-1 py-16 sm:py-24">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <LegalPolicyNotice policyKey="privacyPolicy" />
           {/* Header */}
           <div className="mb-12 border-b border-white/10 pb-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 mb-4 text-xs font-bold text-emerald-400 font-display uppercase tracking-widest">

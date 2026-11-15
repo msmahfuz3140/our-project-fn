@@ -427,7 +427,7 @@ export default function AdminSettingsPage() {
       ...websiteSettings,
       faqItems: [
         ...currentFaqs,
-        { question: 'New Question', answer: 'Answer content here...', order: currentFaqs.length + 1 }
+        { question: 'New Question', answer: 'Answer content here...', category: 'Platform', order: currentFaqs.length + 1 }
       ]
     });
   };
@@ -441,7 +441,7 @@ export default function AdminSettingsPage() {
     });
   };
 
-  const handleUpdateFaq = (index: number, field: 'question' | 'answer', value: string) => {
+  const handleUpdateFaq = (index: number, field: 'question' | 'answer' | 'category', value: string) => {
     const currentFaqs = [...(websiteSettings?.faqItems || [])];
     currentFaqs[index] = { ...currentFaqs[index], [field]: value };
     setWebsiteSettings({
@@ -1610,6 +1610,13 @@ export default function AdminSettingsPage() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
+                      <input
+                        type="text"
+                        value={faq.category || 'Platform'}
+                        onChange={(e) => handleUpdateFaq(idx, 'category', e.target.value)}
+                        placeholder="Category (e.g. Platform, Payments, Subscriptions, Referrals)"
+                        className="w-full rounded-lg border border-white/10 bg-black/40 p-2 font-display text-[11px] text-amber-200 focus:border-amber-500 focus:outline-none"
+                      />
                       <input
                         type="text"
                         value={faq.question}

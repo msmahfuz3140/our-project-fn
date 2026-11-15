@@ -83,7 +83,7 @@ export default function AdminSecurityPage() {
     return <AdminErrorState message={error || 'Security data unavailable.'} onRetry={fetchSecurityData} />;
   }
 
-  const { blockedCount, suspendedCount, otpAttempts24h, expiredOtps24h, recentAuditLogs, recentFailedPayments, suspiciousReferrals, systemHealth } = overview;
+  const { blockedCount, suspendedCount, otpAttempts24h, failedLogins24h, expiredOtps24h, recentAuditLogs, recentFailedPayments, suspiciousReferrals, systemHealth } = overview;
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
@@ -135,6 +135,7 @@ export default function AdminSecurityPage() {
           </div>
           <div className="text-2xl font-black font-display text-white">{otpAttempts24h}</div>
           <p className="text-[11px] text-slate-500 font-mono">Flagged identifier attempts</p>
+          <p className="text-[11px] text-amber-400/80 font-mono">{failedLogins24h || 0} failed logins (24h)</p>
         </div>
 
         <div className="p-5 rounded-2xl border border-white/10 bg-[#070b14] space-y-1">

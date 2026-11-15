@@ -1,5 +1,6 @@
 import { Navbar } from '../components/Navbar';
 import { LiveTicker } from '../components/LiveTicker';
+import { AnnouncementBanner } from '../components/AnnouncementBanner';
 import { Hero } from '../components/Hero';
 import { StatsBar } from '../components/StatsBar';
 import { FeatureBento } from '../components/FeatureBento';
@@ -26,6 +27,9 @@ export default function HomePage() {
       <div className="relative z-10 flex flex-col">
         {/* Sticky Navigation Header */}
         <Navbar />
+
+        {/* Admin-managed announcement banner */}
+        <AnnouncementBanner />
 
         {/* Real-time Streaming Ticker */}
         <LiveTicker />
