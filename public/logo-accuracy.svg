@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="72%">
+      <stop offset="0%" stop-color="#152036"/>
+      <stop offset="55%" stop-color="#080d17"/>
+      <stop offset="100%" stop-color="#04060b"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="26%" stop-color="#fbbf24"/>
+      <stop offset="62%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+    <linearGradient id="goldSoft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#b45309" stop-opacity="0.25"/>
+    </linearGradient>
+    <radialGradient id="core" cx="50%" cy="38%" r="68%">
+      <stop offset="0%" stop-color="#1c2a44"/>
+      <stop offset="58%" stop-color="#0a101c"/>
+      <stop offset="100%" stop-color="#04070d"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+  </defs>
+
+  <circle cx="512" cy="512" r="500" fill="#04060b"/>
+  <circle cx="512" cy="512" r="500" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="486" fill="none" stroke="url(#gold)" stroke-width="12"/>
+  <circle cx="512" cy="512" r="462" fill="none" stroke="#f59e0b" stroke-opacity="0.22" stroke-width="2"/>
+  <circle cx="512" cy="512" r="440" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="1"/>
+
+  <!-- 37-pocket outer tick ring -->
+  <g transform="translate(512 512)">
+    <g id="pockets">
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#15803d" stroke-width="11" stroke-linecap="round" transform="rotate(0)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(9.7297)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(19.4595)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(29.1892)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(38.9189)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(48.6486)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(58.3784)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(68.1081)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(77.8378)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(87.5676)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(97.2973)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(107.027)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(116.7568)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(126.4865)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(136.2162)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(145.9459)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(155.6757)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(165.4054)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(175.1351)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(184.8649)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(194.5946)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(204.3243)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(214.0541)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(223.7838)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(233.5135)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(243.2432)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(252.973)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(262.7027)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(272.4324)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(282.1622)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(291.8919)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(301.6216)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(311.3514)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(321.0811)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(330.8108)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#991b1b" stroke-width="11" stroke-linecap="round" transform="rotate(340.5405)"/>
+      <line x1="0" y1="-352" x2="0" y2="-416" stroke="#111827" stroke-width="11" stroke-linecap="round" transform="rotate(350.2703)"/>
+    </g>
+  </g>
+
+  <!-- Inner rings -->
+  <circle cx="512" cy="512" r="338" fill="url(#core)" stroke="url(#goldSoft)" stroke-width="5"/>
+  <circle cx="512" cy="512" r="314" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+  <circle cx="512" cy="512" r="286" fill="none" stroke="#f59e0b" stroke-opacity="0.22" stroke-width="2" stroke-dasharray="4 10"/>
+
+  <!-- Brand wordmark -->
+  <text x="512" y="284" text-anchor="middle" fill="#fcd34d" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing="8">ROULETTE ACCURACY</text>
+
+  <!-- Crosshair -->
+  <g stroke="#f59e0b" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round">
+    <line x1="512" y1="200" x2="512" y2="246"/>
+    <line x1="512" y1="778" x2="512" y2="824"/>
+    <line x1="200" y1="512" x2="246" y2="512"/>
+    <line x1="778" y1="512" x2="824" y2="512"/>
+  </g>
+
+  <!-- Center monogram -->
+  <circle cx="512" cy="512" r="202" fill="none" stroke="#f59e0b" stroke-opacity="0.16" stroke-width="2"/>
+  <text x="512" y="560" text-anchor="middle" fill="url(#gold)" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="196" font-weight="900" letter-spacing="-10">RA</text>
+  <text x="512" y="642" text-anchor="middle" fill="#34d399" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" letter-spacing="9">PRECISION ENGINE</text>
+
+  <circle cx="512" cy="512" r="252" fill="none" stroke="#34d399" stroke-opacity="0.08" stroke-width="18" filter="url(#softGlow)"/>
+  <circle cx="512" cy="512" r="250" fill="none" stroke="#34d399" stroke-opacity="0.25" stroke-width="2"/>
+
+</svg>
