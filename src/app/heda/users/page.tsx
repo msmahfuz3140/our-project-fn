@@ -130,8 +130,11 @@ export default function AdminUsersPage() {
 
   // User Password view/edit states
   const [editPassword, setEditPassword] = useState('');
+  const [editConfirmPassword, setEditConfirmPassword] = useState('');
+  const [editMustChangePassword, setEditMustChangePassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordSaveStatus, setPasswordSaveStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
 
   // Staff creation states
@@ -207,6 +210,9 @@ export default function AdminUsersPage() {
   const openViewModal = async (u: UserItem) => {
     setSelectedUser(u);
     setEditPassword('');
+    setEditConfirmPassword('');
+    setEditMustChangePassword(false);
+    setPasswordSaveStatus(null);
     setShowPassword(false);
     setCopiedPassword(false);
     setActiveModal('VIEW');
@@ -228,6 +234,9 @@ export default function AdminUsersPage() {
     setEditPhone(u.phone || '');
     setEditRole(u.role || 'USER');
     setEditPassword('');
+    setEditConfirmPassword('');
+    setEditMustChangePassword(false);
+    setPasswordSaveStatus(null);
     setShowPassword(false);
     setEditCommissionRate(u.moderatorCommissionRate ?? 10);
     setEditIsEmailVerified(!!u.isEmailVerified);
@@ -364,10 +373,20 @@ export default function AdminUsersPage() {
     setIsSubmitting(true);
     try {
       const targetId = (selectedUser.id || selectedUser._id)!;
+      if (editPassword) {
+        if (editPassword.length < 8) {
+          throw new Error('Password must be at least 8 characters long.');
+        }
+        if (editPassword !== editConfirmPassword) {
+          throw new Error('Password and confirmation password do not match.');
+        }
+      }
       await authClient.updateAdminUserProfile(targetId, {
         name: editName.trim(),
         phone: editPhone.trim() || undefined,
-        password: editPassword.trim() || undefined,
+        password: editPassword || undefined,
+        confirmPassword: editPassword ? editConfirmPassword : undefined,
+        mustChangePassword: editPassword ? editMustChangePassword : undefined,
         role: editRole,
         moderatorCommissionRate: editRole === 'MODERATOR' ? Number(editCommissionRate) : undefined,
         isEmailVerified: editIsEmailVerified,
@@ -375,7 +394,11 @@ export default function AdminUsersPage() {
         isActive: editIsActive,
         reason: reasonInput.trim()
       });
-      setActionSuccess(`User account role & profile for ${selectedUser.email} updated and stored in database successfully.`);
+      setActionSuccess(
+        editPassword
+          ? `Password updated for ${selectedUser.email}. It is bcrypt-hashed and cannot be retrieved in plaintext.`
+          : `User account role & profile for ${selectedUser.email} updated and stored in database successfully.`
+      );
       closeModal();
       authClient.clearCache();
       await fetchUsers(true);
@@ -388,22 +411,47 @@ export default function AdminUsersPage() {
 
   const handleSavePasswordOnly = async () => {
     if (!selectedUser) return;
+    setPasswordSaveStatus(null);
     if (!editPassword.trim()) {
-      setActionError('Password cannot be empty.');
+      setPasswordSaveStatus({ type: 'error', text: 'Password cannot be empty.' });
+      return;
+    }
+    if (editPassword.length < 8) {
+      setPasswordSaveStatus({ type: 'error', text: 'Password must be at least 8 characters long.' });
+      return;
+    }
+    if (editPassword !== editConfirmPassword) {
+      setPasswordSaveStatus({ type: 'error', text: 'Password and confirmation password do not match.' });
       return;
     }
     setSavingPassword(true);
     setActionError('');
     try {
       const targetId = (selectedUser.id || selectedUser._id)!;
-      await authClient.updateAdminUserProfile(targetId, {
-        password: editPassword.trim(),
+      const res = await authClient.updateAdminUserProfile(targetId, {
+        password: editPassword,
+        confirmPassword: editConfirmPassword,
+        mustChangePassword: editMustChangePassword,
         reason: 'Admin set a new user password from profile view'
       });
-      setActionSuccess(`Password updated for ${selectedUser.email}. The new password is hashed and is not stored in readable form.`);
+      const successText = editMustChangePassword
+        ? `Temporary password saved for ${selectedUser.email}. Share it securely now — the user must change it at next login.`
+        : `Password updated for ${selectedUser.email}. The new password is bcrypt-hashed and not stored in readable form.`;
+      setPasswordSaveStatus({ type: 'success', text: successText });
+      setActionSuccess(res?.message || successText);
       setEditPassword('');
+      setEditConfirmPassword('');
+      setEditMustChangePassword(false);
+      setShowPassword(false);
       authClient.clearCache();
+      try {
+        const refreshed = await authClient.getAdminUserDetails(targetId);
+        setDetailedUser(refreshed);
+      } catch {
+        // The password was saved; a failed details refresh must not mask success.
+      }
     } catch (err: any) {
+      setPasswordSaveStatus({ type: 'error', text: err?.message || 'Failed to update user password' });
       setActionError(err.message || 'Failed to update user password');
     } finally {
       setSavingPassword(false);
@@ -1389,6 +1437,87 @@ export default function AdminUsersPage() {
                       </button>
                     </div>
 
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={editConfirmPassword}
+                        onChange={(e) => setEditConfirmPassword(e.target.value)}
+                        placeholder="Re-enter the new password"
+                        autoComplete="new-password"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-950/90 px-3.5 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+                      />
+                    </div>
+
+                    <label className="flex items-start gap-2 rounded-xl border border-slate-700 bg-slate-950/60 p-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editMustChangePassword}
+                        onChange={(e) => setEditMustChangePassword(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-amber-500"
+                      />
+                      <span className="text-xs text-slate-300">
+                        <span className="font-semibold text-white">Set as temporary password</span>
+                        <span className="block text-[11px] text-slate-400 mt-0.5">
+                          The user must change this password immediately after their next login. Copy and share it securely now — it will not be shown again.
+                        </span>
+                      </span>
+                    </label>
+
+                    {passwordSaveStatus && (
+                      <div
+                        className={`flex items-start gap-2 rounded-xl border p-3 text-xs ${
+                          passwordSaveStatus.type === 'success'
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                            : 'border-red-500/40 bg-red-500/10 text-red-300'
+                        }`}
+                      >
+                        {passwordSaveStatus.type === 'success' ? (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        )}
+                        <span>{passwordSaveStatus.text}</span>
+                      </div>
+                    )}
+
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-3 space-y-2">
+                      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        <History className="h-3.5 w-3.5" />
+                        <span>Password Reset History</span>
+                      </div>
+                      {detailedUser.user?.mustChangePassword && (
+                        <p className="text-[11px] text-amber-300">
+                          A temporary password is active. The user must change it after login.
+                        </p>
+                      )}
+                      {detailedUser.user?.passwordChangedAt && (
+                        <p className="text-[11px] text-slate-400">
+                          Last changed: {new Date(detailedUser.user.passwordChangedAt).toLocaleString()}
+                          {detailedUser.user.passwordUpdatedByAdminEmail
+                            ? ` by ${detailedUser.user.passwordUpdatedByAdminEmail}`
+                            : ''}
+                        </p>
+                      )}
+                      {(detailedUser.auditLogs || [])
+                        .filter((log: any) => log.action === 'USER_PASSWORD_RESET')
+                        .slice(0, 3)
+                        .map((log: any) => (
+                          <div key={log._id || `${log.createdAt}-${log.adminEmail}`} className="text-[11px] text-slate-400 border-t border-slate-800/80 pt-1.5">
+                            <span className="text-slate-300">{new Date(log.createdAt).toLocaleString()}</span>
+                            {' · '}
+                            <span>{log.adminEmail || 'Administrator'}</span>
+                            {log.newValue?.mustChangePassword ? ' · temporary password' : ''}
+                          </div>
+                        ))}
+                      {!detailedUser.user?.passwordChangedAt &&
+                        !(detailedUser.auditLogs || []).some((log: any) => log.action === 'USER_PASSWORD_RESET') && (
+                          <p className="text-[11px] text-slate-500">No administrative password changes recorded.</p>
+                        )}
+                    </div>
+
                     <p className="text-[11px] text-slate-400 flex items-center gap-1">
                       <span>🔒</span>
                       <span>
@@ -1662,6 +1791,38 @@ export default function AdminUsersPage() {
                 Only a bcrypt hash is stored. The server never returns or displays the existing password.
               </p>
             </div>
+
+            {editPassword && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={editConfirmPassword}
+                    onChange={(e) => setEditConfirmPassword(e.target.value)}
+                    placeholder="Re-enter the new password"
+                    autoComplete="new-password"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm font-mono text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+                <label className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 cursor-pointer self-end">
+                  <input
+                    type="checkbox"
+                    checked={editMustChangePassword}
+                    onChange={(e) => setEditMustChangePassword(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-amber-500"
+                  />
+                  <span className="text-xs text-slate-300">
+                    <span className="font-semibold text-white">Temporary password</span>
+                    <span className="block text-[11px] text-slate-400 mt-0.5">
+                      Force a password change at next login.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* Role & Permission Assignment */}
             <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-3">

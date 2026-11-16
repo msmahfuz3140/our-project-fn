@@ -28,6 +28,7 @@ import { AuthProvider } from '../context/AuthContext';
 import { DisclaimerProvider } from '../context/DisclaimerContext';
 import { ToolWidgetProvider } from '../context/ToolWidgetContext';
 import { FloatingPredictionWidget } from '../components/FloatingPredictionWidget';
+import { PasswordChangeGuard } from '../components/PasswordChangeGuard';
 
 export default function RootLayout({
   children,
@@ -38,6 +39,7 @@ export default function RootLayout({
     <html lang="en" className="dark h-full scroll-smooth">
       <body className="min-h-full flex flex-col bg-[#06080d] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
         <AuthProvider>
+          <PasswordChangeGuard />
           <DisclaimerProvider>
             <ToolWidgetProvider>
               {children}

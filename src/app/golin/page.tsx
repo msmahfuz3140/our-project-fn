@@ -36,8 +36,13 @@ export default function LoginPage() {
     }
 
     try {
-      await login({ identifier, password });
-      
+      const response = await login({ identifier, password });
+
+      if (response?.user?.mustChangePassword) {
+        router.push('/change-password');
+        return;
+      }
+
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const redirectParam = urlParams?.get('redirect');
       if (redirectParam) {

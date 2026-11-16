@@ -69,6 +69,8 @@ export interface AuthUser {
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   isActive: boolean;
+  mustChangePassword?: boolean;
+  passwordChangedAt?: string;
   referralCode?: string;
   hasActiveSubscription: boolean;
   subscriptionPlanId?: string;

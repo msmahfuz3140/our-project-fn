@@ -15,6 +15,7 @@ import {
   Activity,
   CreditCard,
   XCircle,
+  X,
   RotateCcw
 } from 'lucide-react';
 import { authClient, OrderDetails } from '../lib/auth-client';
@@ -24,7 +25,7 @@ import { formatCentsToUsd } from '../shared/plans';
 
 type PaymentStatusMode = 'pending' | 'success' | 'failed';
 
-const TERMINAL_STATUSES = new Set(['FINISHED', 'FAILED', 'EXPIRED', 'REFUNDED', 'REVIEW_REQUIRED']);
+const TERMINAL_STATUSES = new Set(['FINISHED', 'FAILED', 'EXPIRED', 'REFUNDED', 'REJECTED', 'REVIEW_REQUIRED']);
 
 export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
   const router = useRouter();
@@ -40,6 +41,11 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [successToast, setSuccessToast] = useState<{
+    planName: string;
+    transactionId: string;
+    expiry: string | null;
+  } | null>(null);
   const refreshedForPayment = useRef(false);
 
   const load = useCallback(async (background = false) => {
@@ -84,10 +90,11 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
     return () => clearInterval(timer);
   }, [order?.status, load]);
 
-  const isFinished = order?.status === 'FINISHED';
+  const isFinished = order?.status === 'FINISHED' && Boolean(order.verified || order.isFulfilled);
   const isConfirmedOnly = order?.status === 'CONFIRMED';
   const isReview = order?.status === 'PARTIALLY_PAID' || order?.status === 'REVIEW_REQUIRED';
   const isFailed = order?.status === 'FAILED' || order?.status === 'EXPIRED';
+  const isRejected = order?.status === 'REJECTED';
   const isRefunded = order?.status === 'REFUNDED';
   const canOpenCheckout = Boolean(
     order?.checkoutUrl &&
@@ -95,6 +102,7 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
     !order.checkoutUrl.includes('localhost') &&
     !isFinished &&
     !isFailed &&
+    !isRejected &&
     !isRefunded
   );
 
@@ -102,8 +110,79 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
     ? new Date(order.subscription.endDate).toLocaleString()
     : null;
 
+  // Success toast is shown only after the backend reports a verified, fulfilled
+  // FINISHED payment — never because the user merely returned from checkout.
+  useEffect(() => {
+    if (!isFinished || !order) return;
+
+    const storageKey = `payment-success-toast:${order.orderId}:${order.transactionId || order.providerPaymentId || ''}`;
+    const alreadyShown = typeof window !== 'undefined' && sessionStorage.getItem(storageKey) === '1';
+
+    if (!alreadyShown) {
+      sessionStorage.setItem(storageKey, '1');
+      setSuccessToast({
+        planName: order.planName,
+        transactionId: order.transactionId || order.providerPaymentId || order.paymentId,
+        expiry: order.subscription?.endDate
+          ? new Date(order.subscription.endDate).toLocaleString()
+          : null
+      });
+    }
+
+    const timer = setTimeout(() => setSuccessToast(null), 10000);
+    return () => clearTimeout(timer);
+  }, [
+    isFinished,
+    order?.orderId,
+    order?.transactionId,
+    order?.providerPaymentId,
+    order?.paymentId,
+    order?.planName,
+    order?.subscription?.endDate
+  ]);
+
   return (
     <div className="min-h-[60vh] bg-[#06080d] text-slate-100 flex flex-col selection:bg-amber-500 selection:text-black">
+      {successToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed right-4 top-4 z-[100] w-[calc(100%-2rem)] max-w-sm overflow-hidden rounded-2xl border border-emerald-500/40 bg-[#07120c]/95 shadow-2xl shadow-emerald-500/20 backdrop-blur-xl"
+        >
+          <div className="flex items-start gap-3 p-4">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-xs font-black uppercase tracking-wider text-emerald-300">
+                Payment Verified — Premium Activated
+              </p>
+              <div className="mt-2 space-y-1 font-mono text-[11px] text-slate-300">
+                <p>
+                  <span className="text-slate-500">Plan:</span> {successToast.planName}
+                </p>
+                <p className="break-all">
+                  <span className="text-slate-500">Transaction:</span> {successToast.transactionId}
+                </p>
+                {successToast.expiry && (
+                  <p>
+                    <span className="text-slate-500">Expires:</span> {successToast.expiry}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessToast(null)}
+              className="text-slate-500 transition-colors hover:text-white"
+              aria-label="Dismiss payment success notification"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-transparent" />
+        </div>
+      )}
       <main className="flex-1 flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
         <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#0c1017]/90 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
           <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-amber-500/10 blur-[90px]" />
@@ -169,17 +248,20 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
                       the amount and settlement are verified. Please contact support with your order number.
                     </p>
                   </>
-                ) : isFailed ? (
+                ) : isFailed || isRejected ? (
                   <>
                     <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-rose-500/40 bg-rose-500/10 px-4 py-1.5 font-display text-[10px] font-black uppercase tracking-widest text-rose-300">
                       <XCircle className="h-4 w-4" />
                       Payment {order.status}
                     </div>
                     <h1 className="mb-2 font-display text-2xl font-black uppercase text-white sm:text-3xl">
-                      Payment Did Not Complete
+                      {isRejected ? 'Payment Rejected' : 'Payment Did Not Complete'}
                     </h1>
                     <p className="mx-auto max-w-md text-xs text-slate-400">
-                      The invoice expired or the transaction failed on-chain. No Premium access was granted.
+                      {isRejected
+                        ? order.failureReason ||
+                          'This payment was rejected by administration after review. No Premium access was granted.'
+                        : 'The invoice expired or the transaction failed on-chain. No Premium access was granted.'}
                     </p>
                   </>
                 ) : isRefunded ? (
@@ -273,6 +355,12 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                   <span className="text-slate-400">Provider:</span>
                   <span className="text-slate-300">NOWPayments</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <span className="text-slate-400">Transaction ID:</span>
+                  <span className="max-w-[60%] break-all text-right text-slate-200">
+                    {order.transactionId || order.providerPaymentId || order.paymentId || '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Server Verification:</span>

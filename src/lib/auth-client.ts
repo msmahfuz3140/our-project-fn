@@ -727,6 +727,20 @@ export const authClient = {
     return request<any>(`/payments/admin/orders/${encodeURIComponent(orderId)}`, { bypassCache: true });
   },
 
+  async approveAdminPayment(orderId: string, reason: string): Promise<any> {
+    return request<any>(`/payments/admin/orders/${encodeURIComponent(orderId)}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
+  async rejectAdminPayment(orderId: string, reason: string): Promise<any> {
+    return request<any>(`/payments/admin/orders/${encodeURIComponent(orderId)}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
   async getAdminPlans(): Promise<any[]> {
     return request<any[]>('/admin/plans');
   },

@@ -105,9 +105,11 @@ const NAV_SECTIONS: NavSection[] = [
         icon: CreditCard,
         subItems: [
           { name: 'All Payment Orders', href: '/heda/payments' },
+          { name: 'Pending Payments / Manual Review', href: '/heda/payments?status=PENDING', badge: 'REVIEW' },
           { name: 'Confirmed / Finished', href: '/heda/payments?status=FINISHED' },
           { name: 'Pending Confirmation', href: '/heda/payments?status=WAITING' },
           { name: 'Underpaid / Review', href: '/heda/payments?status=REVIEW_REQUIRED', badge: 'CHECK' },
+          { name: 'Rejected Payments', href: '/heda/payments?status=REJECTED' },
           { name: 'Refunded', href: '/heda/payments?status=REFUNDED' },
           { name: 'Failed & Expired', href: '/heda/payments?status=FAILED' }
         ]

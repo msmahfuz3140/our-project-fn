@@ -40,7 +40,7 @@ interface PaymentOrder {
   payAmountCrypto?: number;
   payAmount?: number;
   payCurrency: string;
-  paymentStatus?: 'WAITING' | 'CONFIRMING' | 'CONFIRMED' | 'SENDING' | 'PARTIALLY_PAID' | 'FINISHED' | 'FAILED' | 'REFUNDED' | 'EXPIRED' | 'REVIEW_REQUIRED';
+  paymentStatus?: 'WAITING' | 'CONFIRMING' | 'CONFIRMED' | 'SENDING' | 'PARTIALLY_PAID' | 'FINISHED' | 'FAILED' | 'REFUNDED' | 'EXPIRED' | 'REJECTED' | 'REVIEW_REQUIRED';
   status?: string;
   planName?: string;
   userId?: {
@@ -91,6 +91,7 @@ interface FinancialSummary {
   refundedPayments?: number;
   verifiedPayments?: number;
   expiredPayments?: number;
+  rejectedPayments?: number;
   lastPaymentAt?: string | null;
 }
 
@@ -149,6 +150,10 @@ export default function AdminPaymentsPage() {
   const debouncedSearch = useDebounce(search, 350);
   const [isLoading, setIsLoading] = useState(true);
   const [actionError, setActionError] = useState('');
+  const [manualAction, setManualAction] = useState<'approve' | 'reject' | null>(null);
+  const [manualReason, setManualReason] = useState('');
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [manualMessage, setManualMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Sync with URL query parameters for nested sidebar items
   useEffect(() => {
@@ -210,6 +215,8 @@ export default function AdminPaymentsPage() {
     setSelectedOrderId(orderId);
     setOrderDetails(null);
     setDetailsError('');
+    setManualMessage(null);
+    setManualAction(null);
     setDetailsLoading(true);
     try {
       const res = await authClient.getAdminPaymentDetails(orderId);
@@ -228,6 +235,52 @@ export default function AdminPaymentsPage() {
     setTimeout(() => setCopiedRef(''), 1500);
   };
 
+  const openManualAction = (action: 'approve' | 'reject') => {
+    setManualAction(action);
+    setManualMessage(null);
+    setManualReason(
+      action === 'approve'
+        ? 'NOWPayments reports finished; payment independently verified before manual activation'
+        : 'Payment cannot be verified as settled; rejected after provider review'
+    );
+  };
+
+  const handleManualAction = async () => {
+    if (!selectedOrderId || !manualAction) return;
+    if (manualReason.trim().length < 3) {
+      setManualMessage({ type: 'error', text: 'Enter a clear reason (at least 3 characters) for the audit log.' });
+      return;
+    }
+
+    setManualSubmitting(true);
+    setManualMessage(null);
+    try {
+      const res =
+        manualAction === 'approve'
+          ? await authClient.approveAdminPayment(selectedOrderId, manualReason.trim())
+          : await authClient.rejectAdminPayment(selectedOrderId, manualReason.trim());
+
+      setManualAction(null);
+      await Promise.all([fetchOrders(), fetchSummary()]);
+      await openOrderDetails(selectedOrderId);
+      setManualMessage({
+        type: 'success',
+        text:
+          res?.message ||
+          (manualAction === 'approve'
+            ? 'Payment verified and Premium activated.'
+            : 'Payment rejected and audit record created.')
+      });
+    } catch (err: any) {
+      setManualMessage({
+        type: 'error',
+        text: err?.message || `Manual ${manualAction} failed. No subscription was changed.`
+      });
+    } finally {
+      setManualSubmitting(false);
+    }
+  };
+
   const handleExportCsv = async () => {
     try {
       setActionError('');
@@ -236,6 +289,13 @@ export default function AdminPaymentsPage() {
       setActionError(err?.message || 'Could not export the payment report.');
     }
   };
+
+  const detailStatus = String(orderDetails?.status || '');
+  const canManualReview = Boolean(
+    orderDetails &&
+      !orderDetails.isFulfilled &&
+      !['REFUNDED', 'REJECTED', 'EXPIRED', 'FAILED'].includes(detailStatus)
+  );
 
   return (
     <div className="space-y-6">
@@ -345,6 +405,7 @@ export default function AdminPaymentsPage() {
             { label: 'Pending', value: summary.pendingPayments ?? summary.pendingOrders ?? 0, color: 'text-amber-400' },
             { label: 'Failed', value: summary.failedPayments ?? summary.failedOrders ?? 0, color: 'text-rose-400' },
             { label: 'Refunded', value: summary.refundedPayments ?? 0, color: 'text-blue-400' },
+            { label: 'Rejected', value: summary.rejectedPayments ?? 0, color: 'text-orange-400' },
             { label: 'Verified', value: summary.verifiedPayments ?? 0, color: 'text-cyan-400' }
           ].map((item) => (
             <div key={item.label} className="rounded-xl border border-slate-800 bg-[#070b14] p-4">
@@ -489,9 +550,11 @@ export default function AdminPaymentsPage() {
       <div className="flex flex-wrap gap-2">
         {[
           { id: 'ALL', label: 'All Orders' },
+          { id: 'PENDING', label: '⏳ Pending Review' },
           { id: 'FINISHED', label: '✅ Confirmed / Finished' },
           { id: 'WAITING', label: '⏳ Pending Confirmation' },
           { id: 'FAILED', label: '❌ Failed & Expired' },
+          { id: 'REJECTED', label: '🚫 Rejected' },
           { id: 'REFUNDED', label: '🔄 Refunded' }
         ].map((tab) => (
           <button
@@ -538,6 +601,7 @@ export default function AdminPaymentsPage() {
               className="w-full rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-2.5 text-sm text-slate-300 focus:border-amber-500 focus:outline-none"
             >
               <option value="ALL">All Payment States</option>
+              <option value="PENDING">All Pending / Awaiting Verification</option>
               <option value="FINISHED">Confirmed / Finished Only</option>
               <option value="CONFIRMED">Blockchain Confirmed (awaiting final)</option>
               <option value="WAITING">Waiting Payment</option>
@@ -547,6 +611,7 @@ export default function AdminPaymentsPage() {
               <option value="REVIEW_REQUIRED">Manual Review Required</option>
               <option value="FAILED">Failed Payments</option>
               <option value="REFUNDED">Refunded Payments</option>
+              <option value="REJECTED">Rejected Payments</option>
               <option value="EXPIRED">Expired Invoices</option>
             </select>
           </div>
@@ -779,6 +844,68 @@ export default function AdminPaymentsPage() {
                 </div>
               ) : orderDetails ? (
                 <div className="space-y-5">
+                  {manualMessage && (
+                    <div
+                      className={`flex items-start gap-2 rounded-xl border p-3 text-xs ${
+                        manualMessage.type === 'success'
+                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                          : 'border-rose-500/40 bg-rose-500/10 text-rose-300'
+                      }`}
+                    >
+                      {manualMessage.type === 'success' ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      )}
+                      <span>{manualMessage.text}</span>
+                    </div>
+                  )}
+
+                  {canManualReview && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                      <div className="font-display text-[10px] font-black uppercase tracking-wider text-amber-300">
+                        Manual Payment Review
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Approval re-checks this payment directly with NOWPayments and is blocked unless the provider
+                        reports a verified <span className="font-mono text-amber-300">finished</span> status. Rejection
+                        never deletes the payment record.
+                      </p>
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => openManualAction('approve')}
+                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500/25"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Approve Payment
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openManualAction('reject')}
+                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-rose-300 hover:bg-rose-500/25"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Reject Payment
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!canManualReview && orderDetails.manualReviewStatus && orderDetails.manualReviewStatus !== 'NONE' && (
+                    <div
+                      className={`rounded-xl border p-3 text-[11px] ${
+                        orderDetails.manualReviewStatus === 'APPROVED'
+                          ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300'
+                          : 'border-rose-500/30 bg-rose-500/5 text-rose-300'
+                      }`}
+                    >
+                      Manual review: <span className="font-bold">{orderDetails.manualReviewStatus}</span>
+                      {orderDetails.reviewedByAdminEmail ? ` by ${orderDetails.reviewedByAdminEmail}` : ''}
+                      {orderDetails.reviewedAt ? ` · ${new Date(orderDetails.reviewedAt).toLocaleString()}` : ''}
+                      {orderDetails.reviewReason ? ` · ${orderDetails.reviewReason}` : ''}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {[
                       { label: 'Customer', value: orderDetails.userId?.name || '—' },
@@ -795,6 +922,10 @@ export default function AdminPaymentsPage() {
                       { label: 'Premium Activated', value: orderDetails.premiumActivated ? 'YES' : 'NO' },
                       { label: 'Signature Verified', value: orderDetails.signatureVerified ? 'YES' : 'NO' },
                       { label: 'Provider API Verified', value: orderDetails.providerVerified ? 'YES' : 'NO' },
+                      { label: 'Manual Review', value: orderDetails.manualReviewStatus || 'NONE' },
+                      { label: 'Reviewed By', value: orderDetails.reviewedByAdminEmail || '—' },
+                      { label: 'Reviewed At', value: orderDetails.reviewedAt ? new Date(orderDetails.reviewedAt).toLocaleString() : '—' },
+                      { label: 'Review Reason', value: orderDetails.reviewReason || '—' },
                       { label: 'Paid At', value: orderDetails.paidAt ? new Date(orderDetails.paidAt).toLocaleString() : '—' },
                       { label: 'Created At', value: orderDetails.createdAt ? new Date(orderDetails.createdAt).toLocaleString() : '—' }
                     ].map((item) => (
@@ -879,6 +1010,103 @@ export default function AdminPaymentsPage() {
                   </div>
                 </div>
               ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Approve / Reject Confirmation Dialog */}
+      {manualAction && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-[#070b14] p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                {manualAction === 'approve' ? 'Confirm Manual Approval' : 'Confirm Payment Rejection'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setManualAction(null)}
+                disabled={manualSubmitting}
+                className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-400 hover:text-white disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div
+                className={`rounded-xl border p-3 text-[11px] ${
+                  manualAction === 'approve'
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                    : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                }`}
+              >
+                {manualAction === 'approve' ? (
+                  <>
+                    The server will re-query NOWPayments and independently validate the payment ID, order ID, price,
+                    currency and settled amount. Premium is activated only if the provider returns{' '}
+                    <span className="font-mono font-bold">finished</span>. Duplicate approvals are blocked automatically.
+                  </>
+                ) : (
+                  <>
+                    Rejecting marks this payment as <span className="font-mono font-bold">REJECTED</span>, notifies the
+                    user, and records the administrator, timestamp and reason. The payment record is preserved.
+                  </>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  {manualAction === 'approve' ? 'Approval reason / provider evidence *' : 'Rejection reason *'}
+                </label>
+                <textarea
+                  value={manualReason}
+                  onChange={(e) => setManualReason(e.target.value)}
+                  rows={3}
+                  placeholder="Required for the immutable audit log"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              {manualMessage?.type === 'error' && (
+                <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300">
+                  {manualMessage.text}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setManualAction(null)}
+                  disabled={manualSubmitting}
+                  className="rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleManualAction}
+                  disabled={manualSubmitting || manualReason.trim().length < 3}
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-black shadow-md disabled:opacity-50 ${
+                    manualAction === 'approve'
+                      ? 'bg-emerald-500 hover:bg-emerald-400'
+                      : 'bg-rose-500 hover:bg-rose-400'
+                  }`}
+                >
+                  {manualSubmitting ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : manualAction === 'approve' ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5" />
+                  )}
+                  {manualSubmitting
+                    ? 'Verifying…'
+                    : manualAction === 'approve'
+                    ? 'Verify & Approve'
+                    : 'Confirm Rejection'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
