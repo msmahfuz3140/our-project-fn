@@ -37,10 +37,13 @@ interface SubscriptionRecord {
   planId: string;
   planName?: string;
   planPriceUsd?: number;
+  customPlanName?: string;
   status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'REVOKED' | 'PENDING';
   startDate: string;
   endDate: string;
   daysRemaining?: number;
+  remainingMs?: number;
+  isExpired?: boolean;
   isRevoked?: boolean;
   isManualGrant: boolean;
   grantReason?: string;
@@ -67,6 +70,15 @@ interface SubscriptionRecord {
     name: string;
     email: string;
   };
+}
+
+function formatRemaining(ms?: number): string {
+  if (!ms || ms <= 0) return 'Expired';
+  const totalMinutes = Math.floor(ms / 60_000);
+  const days = Math.floor(totalMinutes / 1_440);
+  const hours = Math.floor((totalMinutes % 1_440) / 60);
+  const minutes = totalMinutes % 60;
+  return `${days}d ${hours}h ${minutes}m`;
 }
 
 export default function AdminSubscriptionsPage() {
@@ -141,6 +153,11 @@ export default function AdminSubscriptionsPage() {
   const [modalType, setModalType] = useState<'GRANT' | 'EXTEND' | 'REVOKE' | 'UNBAN' | 'EDIT_PLAN' | 'CREATE_PLAN' | 'DELETE_PLAN' | null>(null);
   const [grantEmail, setGrantEmail] = useState('');
   const [grantPlanId, setGrantPlanId] = useState('15_days');
+  const [grantMode, setGrantMode] = useState<'PLAN' | 'CUSTOM'>('PLAN');
+  const [grantDurationValue, setGrantDurationValue] = useState(7);
+  const [grantDurationUnit, setGrantDurationUnit] = useState<'DAYS' | 'MONTHS'>('DAYS');
+  const [grantCustomName, setGrantCustomName] = useState('');
+  const [grantStartDate, setGrantStartDate] = useState('');
   const [extValue, setExtValue] = useState(30);
   const [extUnit, setExtUnit] = useState<'days' | 'months' | 'years'>('days');
   const [reasonInput, setReasonInput] = useState('');
@@ -251,14 +268,45 @@ export default function AdminSubscriptionsPage() {
       setActionError('Mandatory reason required for manual subscription grant.');
       return;
     }
+    if (grantMode === 'CUSTOM' && (!grantDurationValue || grantDurationValue < 1)) {
+      setActionError('Custom duration must be at least 1 day/month.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await authClient.grantAdminManualSubscription({
+      const payload: {
+        targetEmail: string;
+        reason: string;
+        planId?: string;
+        durationValue?: number;
+        durationUnit?: 'DAYS' | 'MONTHS';
+        customPlanName?: string;
+        startDate?: string;
+      } = {
         targetEmail: grantEmail.trim(),
-        planId: grantPlanId,
         reason: reasonInput.trim()
-      });
-      setActionSuccess(`Manual subscription successfully granted to ${grantEmail}. Excluded from sales.`);
+      };
+
+      if (grantMode === 'CUSTOM') {
+        payload.durationValue = Number(grantDurationValue);
+        payload.durationUnit = grantDurationUnit;
+        if (grantCustomName.trim()) payload.customPlanName = grantCustomName.trim();
+      } else {
+        payload.planId = grantPlanId;
+      }
+
+      if (grantStartDate) {
+        const parsed = new Date(grantStartDate);
+        if (Number.isNaN(parsed.getTime())) {
+          throw new Error('Invalid start date/time.');
+        }
+        payload.startDate = parsed.toISOString();
+      }
+
+      await authClient.grantAdminManualSubscription(payload);
+      setActionSuccess(
+        `Manual subscription successfully granted to ${grantEmail}. Exact dates are stored in the database; excluded from sales.`
+      );
       closeModal();
       fetchSubscriptions();
     } catch (err: any) {
@@ -487,6 +535,11 @@ export default function AdminSubscriptionsPage() {
               setGrantEmail('');
               setGrantPlanId('15_days');
               setReasonInput('');
+              setGrantMode('PLAN');
+              setGrantDurationValue(7);
+              setGrantDurationUnit('DAYS');
+              setGrantCustomName('');
+              setGrantStartDate('');
               setModalType('GRANT');
             }}
             className="flex items-center gap-2 rounded-xl border border-amber-500/50 bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-400 transition-colors shadow-[0_0_15px_rgba(245,158,11,0.2)]"
@@ -556,8 +609,9 @@ export default function AdminSubscriptionsPage() {
             {[
               { id: 'ALL', label: 'All Passes' },
               { id: 'ACTIVE', label: '⭐ Active Passes' },
-              { id: 'REVOKED', label: '🚫 Ban Subscriptions' },
               { id: 'EXPIRED', label: '⌛ Expired Passes' },
+              { id: 'INACTIVE', label: '⏸ Inactive / Cancelled' },
+              { id: 'REVOKED', label: '🚫 Ban Subscriptions' },
               { id: 'CLAIM_PENDING', label: '🔐 Awaiting Tool Unlock' }
             ].map((tab) => (
               <button
@@ -606,6 +660,7 @@ export default function AdminSubscriptionsPage() {
                   <option value="ALL">All Entitlement Statuses</option>
                   <option value="ACTIVE">Active Entitlements Only</option>
                   <option value="EXPIRED">Expired Subscriptions</option>
+                  <option value="INACTIVE">Inactive / Cancelled / Pending</option>
                   <option value="CLAIM_PENDING">Awaiting Tool Unlock</option>
                   <option value="REVOKED">Revoked Subscriptions</option>
                   <option value="CANCELLED">Cancelled</option>
@@ -681,19 +736,29 @@ export default function AdminSubscriptionsPage() {
 
                           <td className="px-4 py-4">
                             <div className="text-xs text-slate-300 font-mono">
-                              Start: {new Date(s.startDate).toLocaleDateString()}
+                              Start: {new Date(s.startDate).toLocaleString()}
                             </div>
                             <div className="text-xs font-semibold text-white font-mono">
-                              Expiry: {new Date(s.endDate).toLocaleDateString()}
+                              Expiry: {new Date(s.endDate).toLocaleString()}
                             </div>
                             <div className="mt-1">
-                              {s.daysRemaining !== undefined && s.daysRemaining > 0 ? (
+                              {s.remainingMs !== undefined ? (
+                                s.remainingMs > 0 ? (
+                                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/30">
+                                    <Clock className="h-2.5 w-2.5" /> {formatRemaining(s.remainingMs)} remaining
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/30">
+                                    Expired
+                                  </span>
+                                )
+                              ) : s.daysRemaining !== undefined && s.daysRemaining > 0 ? (
                                 <span className="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/30">
                                   <Clock className="h-2.5 w-2.5" /> {s.daysRemaining} Days Left
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/30">
-                                  Expired (0 Days)
+                                  Expired
                                 </span>
                               )}
                             </div>
@@ -1120,19 +1185,99 @@ export default function AdminSubscriptionsPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Select Plan</label>
-              <select
-                value={grantPlanId}
-                onChange={(e) => setGrantPlanId(e.target.value)}
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setGrantMode('PLAN')}
+                className={`rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-all ${
+                  grantMode === 'PLAN'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400'
+                }`}
               >
-                {plans.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.durationDays} Days) — {formatCentsToUsd(p.priceCents)} Normal Value
-                  </option>
-                ))}
-              </select>
+                Use Catalog Plan
+              </button>
+              <button
+                type="button"
+                onClick={() => setGrantMode('CUSTOM')}
+                className={`rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-all ${
+                  grantMode === 'CUSTOM'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400'
+                }`}
+              >
+                Custom Duration
+              </button>
+            </div>
+
+            {grantMode === 'PLAN' ? (
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Select Plan</label>
+                <select
+                  value={grantPlanId}
+                  onChange={(e) => setGrantPlanId(e.target.value)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                >
+                  {plans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.durationDays} Days) — {formatCentsToUsd(p.priceCents)} Normal Value
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Duration *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={3650}
+                    value={grantDurationValue}
+                    onChange={(e) => setGrantDurationValue(Number(e.target.value) || 1)}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Unit</label>
+                  <select
+                    value={grantDurationUnit}
+                    onChange={(e) => setGrantDurationUnit(e.target.value as 'DAYS' | 'MONTHS')}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="DAYS">Days</option>
+                    <option value="MONTHS">Months</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    Custom Plan Label <span className="font-normal text-slate-500">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={100}
+                    value={grantCustomName}
+                    onChange={(e) => setGrantCustomName(e.target.value)}
+                    placeholder="e.g. 7 Days Support Pass"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                Start Date & Time <span className="font-normal text-slate-500">(optional · blank = server now)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={grantStartDate}
+                onChange={(e) => setGrantStartDate(e.target.value)}
+                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+              />
+              <p className="mt-1 text-[10px] text-slate-500">
+                The expiration timestamp is calculated from this exact start time. A future start keeps the current pass until the new one begins.
+              </p>
             </div>
 
             <div>

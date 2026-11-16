@@ -783,6 +783,25 @@ export default function AdminUsersPage() {
         <button
           type="button"
           onClick={() => {
+            router.push('/heda/users?sub=EXPIRED');
+            setStatusFilter('');
+            setSubFilter('EXPIRED');
+            setRoleFilter('');
+            setPage(1);
+          }}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+            subFilter === 'EXPIRED'
+              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.25)] font-bold'
+              : 'border border-rose-500/20 bg-rose-500/5 text-rose-300/80 hover:bg-rose-500/10'
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          <span>⌛ Expired Subscribers</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
             router.push('/heda/users?sub=INACTIVE');
             setStatusFilter('');
             setSubFilter('INACTIVE');
@@ -796,7 +815,7 @@ export default function AdminUsersPage() {
           }`}
         >
           <UserCheck className="h-3.5 w-3.5" />
-          <span>Free Tier Members</span>
+          <span>Inactive / Never Subscribed</span>
         </button>
 
         <button
@@ -986,7 +1005,8 @@ export default function AdminUsersPage() {
             >
               <option value="">All Subscription States</option>
               <option value="ACTIVE">⭐ Active VIP Subscribers</option>
-              <option value="INACTIVE">No Active Subscription</option>
+              <option value="EXPIRED">⌛ Expired Subscribers</option>
+              <option value="INACTIVE">Inactive / Never Subscribed</option>
             </select>
           </div>
         </div>

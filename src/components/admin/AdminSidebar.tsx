@@ -31,7 +31,8 @@ import {
   Clock,
   AlertTriangle,
   Layers,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Send
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -95,8 +96,9 @@ const NAV_SECTIONS: NavSection[] = [
         subItems: [
           { name: 'All Subscriptions', href: '/heda/subscriptions' },
           { name: 'Active Passes', href: '/heda/subscriptions?status=ACTIVE' },
-          { name: 'Ban Subscriptions', href: '/heda/subscriptions?status=REVOKED', badge: 'BANNED' },
           { name: 'Expired Passes', href: '/heda/subscriptions?status=EXPIRED' },
+          { name: 'Inactive / Cancelled', href: '/heda/subscriptions?status=INACTIVE' },
+          { name: 'Ban Subscriptions', href: '/heda/subscriptions?status=REVOKED', badge: 'BANNED' },
           { name: 'Manage Plan Catalog', href: '/heda/subscriptions?tab=PLANS' }
         ]
       },
@@ -137,6 +139,7 @@ const NAV_SECTIONS: NavSection[] = [
           { name: 'API Settings', href: '/heda/settings?tab=api', badge: 'SK' },
           { name: 'Edit Support Info', href: '/heda/settings?tab=support', badge: 'TG' },
           { name: 'Website CMS Settings', href: '/heda/settings' },
+          { name: 'Community Management', href: '/heda/settings?tab=website#community', badge: 'TG' },
           { name: 'Announcement Campaigns', href: '/heda/notifications' }
         ]
       }

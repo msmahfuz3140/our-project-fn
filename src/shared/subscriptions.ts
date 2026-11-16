@@ -137,6 +137,8 @@ export interface AccessStatusResponse {
   isRoleBypass?: boolean; // True for Main Admin & Moderator
   needsSecretCode?: boolean;
   isApproved?: boolean;
+  serverTime?: string;
+  remainingMs?: number;
 }
 
 export const UnlockToolSchema = z.object({

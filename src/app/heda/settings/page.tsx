@@ -58,6 +58,16 @@ export default function AdminSettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (loading || activeTab !== 'website') return;
+    if (typeof window !== 'undefined' && window.location.hash === '#community') {
+      const timer = setTimeout(() => {
+        document.getElementById('community')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, activeTab]);
+
   // Tool Settings State
   const [toolSettings, setToolSettings] = useState<any>({
     isToolEnabled: true,
@@ -1572,6 +1582,120 @@ export default function AdminSettingsPage() {
                     }
                     className="w-full rounded-xl border border-white/10 bg-black/40 p-2.5 font-body text-xs text-white focus:border-amber-500 focus:outline-none"
                   />
+                </div>
+              </div>
+
+              {/* Community Management */}
+              <div id="community" className="rounded-2xl border border-sky-400/20 bg-[#070c16]/80 p-6 backdrop-blur-xl space-y-4">
+                <div className="flex flex-col gap-3 border-b border-white/5 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <Send className="h-4 w-4 text-sky-400" />
+                    <div>
+                      <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">
+                        Our Community — Telegram Management
+                      </h3>
+                      <p className="mt-0.5 text-[11px] text-slate-400">
+                        These values render on the homepage immediately after saving. Disable to hide the section.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={websiteSettings.community?.enabled !== false}
+                      onChange={(e) =>
+                        setWebsiteSettings({
+                          ...websiteSettings,
+                          community: { ...websiteSettings.community, enabled: e.target.checked }
+                        })
+                      }
+                      className="h-4 w-4 accent-sky-500"
+                    />
+                    <span className="font-display text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                      Show on homepage
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="font-display text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                      Telegram Community Name
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={100}
+                      value={websiteSettings.community?.telegramName || 'Roulette Accuracy Official Community'}
+                      onChange={(e) =>
+                        setWebsiteSettings({
+                          ...websiteSettings,
+                          community: { ...websiteSettings.community, telegramName: e.target.value }
+                        })
+                      }
+                      className="w-full rounded-xl border border-white/10 bg-black/40 p-2.5 font-body text-xs text-white focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-display text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                      Telegram Link or @handle
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={300}
+                      value={websiteSettings.community?.telegramLink || ''}
+                      onChange={(e) =>
+                        setWebsiteSettings({
+                          ...websiteSettings,
+                          community: { ...websiteSettings.community, telegramLink: e.target.value }
+                        })
+                      }
+                      placeholder="https://t.me/yourcommunity"
+                      className="w-full rounded-xl border border-white/10 bg-black/40 p-2.5 font-mono text-xs text-white focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-display text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                      Button Text
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={60}
+                      value={websiteSettings.community?.buttonText || 'Join Our Telegram Community'}
+                      onChange={(e) =>
+                        setWebsiteSettings({
+                          ...websiteSettings,
+                          community: { ...websiteSettings.community, buttonText: e.target.value }
+                        })
+                      }
+                      className="w-full rounded-xl border border-white/10 bg-black/40 p-2.5 font-body text-xs text-white focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:row-span-2">
+                    <label className="font-display text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                      Community Description
+                    </label>
+                    <textarea
+                      rows={5}
+                      maxLength={600}
+                      value={
+                        websiteSettings.community?.description ||
+                        'Join our official Telegram community for live table alerts, platform updates, and direct access to the Accuracy.tools team.'
+                      }
+                      onChange={(e) =>
+                        setWebsiteSettings({
+                          ...websiteSettings,
+                          community: { ...websiteSettings.community, description: e.target.value }
+                        })
+                      }
+                      className="w-full rounded-xl border border-white/10 bg-black/40 p-2.5 font-body text-xs text-white focus:border-sky-500 focus:outline-none"
+                    />
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      HTML/scripts are stripped automatically. The section is hidden when disabled or the link is empty.
+                    </p>
+                  </div>
                 </div>
               </div>
 

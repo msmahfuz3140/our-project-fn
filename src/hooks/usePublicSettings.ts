@@ -11,6 +11,13 @@ export interface PublicWebsiteSettings {
   supportContact?: { email?: string; telegram?: string; discord?: string };
   socialLinks?: { twitter?: string; telegram?: string; youtube?: string; discord?: string };
   homepageContent?: { heroTitle?: string; heroSubtitle?: string; announcementBanner?: string };
+  community?: {
+    enabled?: boolean;
+    telegramName?: string;
+    telegramLink?: string;
+    description?: string;
+    buttonText?: string;
+  };
   footerContent?: { copyrightText?: string; disclaimerText?: string };
   faqItems?: Array<{ question: string; answer: string; category?: string; order?: number }>;
   legalPolicies?: Record<string, string>;

@@ -5,6 +5,7 @@ import { Hero } from '../components/Hero';
 import { StatsBar } from '../components/StatsBar';
 import { FeatureBento } from '../components/FeatureBento';
 import { LiveLobbyPreview } from '../components/LiveLobbyPreview';
+import { CommunitySection } from '../components/CommunitySection';
 import { PlansSection } from '../components/PlansSection';
 import { HowItWorks } from '../components/HowItWorks';
 import { FaqSection } from '../components/FaqSection';
@@ -45,6 +46,9 @@ export default function HomePage() {
 
         {/* Multi-Table Live Surveillance Lobby */}
         <LiveLobbyPreview />
+
+        {/* Admin-managed official Telegram community */}
+        <CommunitySection />
 
         {/* The 5 Subscription Plans (NOWPayments Crypto) */}
         <PlansSection />

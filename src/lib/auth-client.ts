@@ -520,7 +520,10 @@ export const authClient = {
 
   // Authoritative Server-Side Subscription Access Verification
   async getAccessStatus(): Promise<import('../shared/subscriptions').AccessStatusResponse> {
-    return request<import('../shared/subscriptions').AccessStatusResponse>('/subscriptions/access-status');
+    return request<import('../shared/subscriptions').AccessStatusResponse>('/subscriptions/access-status', {
+      bypassCache: true,
+      ttlMs: 0
+    });
   },
 
   // Secret Code Tool Unlock
@@ -668,7 +671,15 @@ export const authClient = {
     return request<any>(`/subscriptions/admin/list${qs}`);
   },
 
-  async grantAdminManualSubscription(data: { targetEmail: string; planId: string; reason: string }): Promise<any> {
+  async grantAdminManualSubscription(data: {
+    targetEmail: string;
+    planId?: string;
+    durationValue?: number;
+    durationUnit?: 'DAYS' | 'MONTHS';
+    customPlanName?: string;
+    startDate?: string;
+    reason: string;
+  }): Promise<any> {
     return request<any>('/subscriptions/admin/grant', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -931,8 +942,8 @@ export const authClient = {
   // --- Phase 8: Website CMS & Settings ---
   async getPublicWebsiteSettings(): Promise<any> {
     return request<any>('/settings/public', {
-      ttlMs: 60_000,
-      staleMs: 300_000,
+      ttlMs: 15_000,
+      staleMs: 30_000,
       persist: true
     });
   },

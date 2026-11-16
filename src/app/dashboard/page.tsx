@@ -45,6 +45,7 @@ import { useDisclaimer } from '../../context/DisclaimerContext';
 import { NotificationBell } from '../../components/NotificationBell';
 import { ProfileView } from '../../components/ProfileView';
 import { PaymentHistory } from '../../components/PaymentHistory';
+import { SubscriptionCountdown } from '../../components/SubscriptionCountdown';
 
 type DashboardTab =
   | 'overview'
@@ -60,7 +61,7 @@ type DashboardTab =
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { user, isLoading, isAuthenticated, logout, refreshUser } = useAuth();
   const { requestToolAccess } = useDisclaimer();
 
   // Navigation tab state
@@ -144,6 +145,16 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchAccess();
   }, [fetchAccess]);
+
+  const handlePremiumExpired = useCallback(() => {
+    // Server time has crossed endDate. Refresh both the auth subscription flag
+    // and the authoritative access status so premium UI locks immediately.
+    void refreshUser().catch(() => null);
+    void authClient
+      .getAccessStatus()
+      .then((status) => setAccessStatus(status))
+      .catch(() => null);
+  }, [refreshUser]);
 
   // Refresh subscription/access state when the user returns to the tab, so
   // admin/manual subscription changes become visible without a hard reload.
@@ -704,6 +715,16 @@ export default function DashboardPage() {
                       </Link>
                     )}
                   </div>
+                  {accessStatus?.hasAccess && accessStatus?.endDate && (
+                    <div className="mt-2">
+                      <SubscriptionCountdown
+                        compact
+                        endDate={accessStatus.endDate}
+                        serverTime={accessStatus.serverTime}
+                        onExpire={handlePremiumExpired}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Stat 2: Tool Status */}
@@ -867,18 +888,22 @@ export default function DashboardPage() {
                     {user.hasActiveSubscription ? (
                       <div className="text-right">
                         <span className="text-[10px] font-display font-bold uppercase text-slate-500 block">
-                          Days Remaining
+                          Time Remaining
                         </span>
-                        <span className="font-display text-2xl font-black text-amber-400">
-                          {accessStatus?.daysRemaining ? `${accessStatus.daysRemaining} Days` : 'VIP Active'}
-                        </span>
-                        <span className="mt-1 block font-mono text-[10px] text-slate-400">
+                        <div className="mt-2 w-full min-w-[250px] max-w-xs">
+                          <SubscriptionCountdown
+                            endDate={accessStatus?.endDate || user.subscriptionExpiresAt}
+                            serverTime={accessStatus?.serverTime}
+                            onExpire={handlePremiumExpired}
+                          />
+                        </div>
+                        <span className="mt-2 block font-mono text-[10px] text-slate-400">
                           Expires:{' '}
                           {accessStatus?.expiresAtFormatted ||
                             (accessStatus?.endDate
-                              ? new Date(accessStatus.endDate).toLocaleDateString()
+                              ? new Date(accessStatus.endDate).toLocaleString()
                               : user.subscriptionExpiresAt
-                              ? new Date(user.subscriptionExpiresAt).toLocaleDateString()
+                              ? new Date(user.subscriptionExpiresAt).toLocaleString()
                               : '—')}
                         </span>
                       </div>

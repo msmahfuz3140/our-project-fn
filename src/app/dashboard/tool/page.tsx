@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,22 +34,28 @@ export default function DashboardToolPage() {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [toolKey, setToolKey] = useState<number>(0);
+  const serverClockOffsetRef = useRef(0);
 
   useEffect(() => {
     setToolKey(Date.now());
   }, []);
 
   // Authoritative server-side verification check
-  const verifyAccess = useCallback(async () => {
-    setAccessLoading(true);
-    setAccessError(null);
+  const verifyAccess = useCallback(async (silent = false) => {
+    if (!silent) setAccessLoading(true);
+    if (!silent) setAccessError(null);
     try {
       const status = await authClient.getAccessStatus();
       setAccessStatus(status);
+      if (status.serverTime) {
+        serverClockOffsetRef.current = new Date(status.serverTime).getTime() - Date.now();
+      }
     } catch (err: any) {
-      setAccessError(err?.message || 'Failed to authenticate subscription access with server.');
+      if (!silent) {
+        setAccessError(err?.message || 'Failed to authenticate subscription access with server.');
+      }
     } finally {
-      setAccessLoading(false);
+      if (!silent) setAccessLoading(false);
     }
   }, []);
 
@@ -59,16 +65,25 @@ export default function DashboardToolPage() {
     verifyAccess();
   }, [verifyAccess]);
 
-  // Real-time dynamic ticking expiration monitor
+  // Real-time dynamic ticking expiration monitor. Uses the server-clock offset
+  // captured during verification so changing the device clock cannot extend
+  // the countdown or keep the tool unlocked.
   useEffect(() => {
     if (!accessStatus?.endDate) {
       setSecondsRemaining(null);
       return;
     }
 
+    const monotonicStart = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const countdownBaseline = {
+      serverNow: Date.now() + serverClockOffsetRef.current,
+      monotonic: monotonicStart
+    };
+
     const updateCountdown = () => {
       const endMs = new Date(accessStatus.endDate!).getTime();
-      const nowMs = Date.now();
+      const monotonicNow = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const nowMs = countdownBaseline.serverNow + (monotonicNow - countdownBaseline.monotonic);
       const diffSec = Math.floor((endMs - nowMs) / 1000);
 
       if (diffSec <= 0) {
@@ -96,7 +111,17 @@ export default function DashboardToolPage() {
     updateCountdown();
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
-  }, [accessStatus?.endDate, accessStatus?.hasAccess]);
+  }, [accessStatus?.endDate, accessStatus?.hasAccess, accessStatus?.serverTime]);
+
+  // Revalidate with the backend while the tool is open so an admin revocation
+  // or an expiry is enforced without requiring a page reload.
+  useEffect(() => {
+    if (!accessStatus?.hasAccess) return;
+    const timer = setInterval(() => {
+      void verifyAccess(true);
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [accessStatus?.hasAccess, verifyAccess]);
 
   const formatRemaining = () => {
     if (secondsRemaining === null) {
@@ -105,23 +130,15 @@ export default function DashboardToolPage() {
       }
       return null;
     }
-    if (secondsRemaining <= 0) return 'Expired (0d)';
+    if (secondsRemaining <= 0) return 'Expired';
 
     const days = Math.floor(secondsRemaining / 86400);
     const hours = Math.floor((secondsRemaining % 86400) / 3600);
     const mins = Math.floor((secondsRemaining % 3600) / 60);
     const secs = secondsRemaining % 60;
+    const pad = (value: number) => String(value).padStart(2, '0');
 
-    if (days > 1) {
-      return `${days} days left`;
-    }
-    if (days === 1) {
-      return `1 day ${hours}h left`;
-    }
-    if (hours > 0) {
-      return `${hours}h ${mins}m left`;
-    }
-    return `${mins}m ${secs}s left`;
+    return `${days}d ${pad(hours)}:${pad(mins)}:${pad(secs)}`;
   };
 
   useEffect(() => {
@@ -174,7 +191,7 @@ export default function DashboardToolPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={verifyAccess}
+              onClick={() => verifyAccess()}
               className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-display text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all"
             >
               <RefreshCw className="h-3.5 w-3.5" />
