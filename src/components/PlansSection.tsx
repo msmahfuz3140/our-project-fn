@@ -19,7 +19,7 @@ import {
   TableProperties,
   AlertTriangle
 } from 'lucide-react';
-import { SubscriptionPlan, formatCentsToUsd } from '../shared/plans';
+import { SubscriptionPlan, formatCentsToUsd, DEFAULT_PLANS_CATALOG } from '../shared/plans';
 import { authClient } from '../lib/auth-client';
 import { useAuth } from '../context/AuthContext';
 import { CryptoPaymentModal } from './CryptoPaymentModal';
@@ -170,13 +170,13 @@ export function PlansSection() {
     setPlansError(null);
     try {
       const data = await authClient.getPlans();
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error('No subscription plans are currently published.');
+      if (Array.isArray(data) && data.length > 0) {
+        setPlans(data);
+        return;
       }
-      setPlans(data);
-    } catch (err: any) {
-      setPlansError(err?.message || 'Unable to load subscription plans. Please retry.');
-      setPlans([]);
+      setPlans(DEFAULT_PLANS_CATALOG.filter((p) => p.isActive));
+    } catch {
+      setPlans(DEFAULT_PLANS_CATALOG.filter((p) => p.isActive));
     } finally {
       setPlansLoading(false);
     }

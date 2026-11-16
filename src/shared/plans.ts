@@ -30,6 +30,111 @@ export interface SubscriptionPlan {
 
 export const MODERATOR_COMMISSION_RATE = 0.50; // 50% referral commission for moderators
 
+export const DEFAULT_PLANS_CATALOG: SubscriptionPlan[] = [
+  {
+    id: 'PLAN_15_DAYS',
+    name: '15 Days Pass',
+    badge: 'STARTER',
+    description: '15 calendar days full live access to European Roulette prediction feeds across 20+ tables.',
+    priceUsd: 15,
+    priceCents: 1500,
+    duration: { unit: 'DAYS', value: 15 },
+    durationDays: 15,
+    features: [
+      'Access to 20+ Evolution & Pragmatic live tables',
+      'Real-time live spin tracking',
+      'Offset Strategy prediction metrics',
+      'Pocket distance (0-3) indicators',
+      'Real-time hot streak alerts',
+      'Telegram community support'
+    ],
+    isActive: true,
+    isVisible: true,
+    displayOrder: 0
+  },
+  {
+    id: 'PLAN_1_MONTH',
+    name: '1 Month Pro',
+    badge: 'MOST POPULAR',
+    isPopular: true,
+    description: '1 full calendar month algorithmic coverage for disciplined session profitability.',
+    priceUsd: 200,
+    priceCents: 20000,
+    duration: { unit: 'MONTHS', value: 1 },
+    durationDays: 30,
+    features: [
+      'Everything in 15 Days Pass',
+      'Target Strategy unlocked (W/L streak counter)',
+      'Momentum weakening warning signals',
+      'Automated hot table detection',
+      'Priority live customer support'
+    ],
+    isActive: true,
+    isVisible: true,
+    displayOrder: 1
+  },
+  {
+    id: 'PLAN_3_MONTHS',
+    name: '3 Months Master',
+    badge: 'PRO VALUE',
+    description: '3 full calendar months of tactical telemetry and high-confidence wheel trends.',
+    priceUsd: 450,
+    priceCents: 45000,
+    duration: { unit: 'MONTHS', value: 3 },
+    durationDays: 90,
+    features: [
+      'Everything in 1 Month Pro',
+      'Dealer Signature Strategy unlocked',
+      'Ball Travel Line (Over/Under) triggers',
+      'Live dealer shift change transition alerts',
+      'Private VIP subscriber channel'
+    ],
+    isActive: true,
+    isVisible: true,
+    displayOrder: 2
+  },
+  {
+    id: 'PLAN_6_MONTHS',
+    name: '6 Months Elite',
+    badge: 'ADVANCED EDGE',
+    description: '6 full calendar months of institutional predictive metrics across 20+ live tables.',
+    priceUsd: 700,
+    priceCents: 70000,
+    duration: { unit: 'MONTHS', value: 6 },
+    durationDays: 180,
+    features: [
+      'Everything in 3 Months Master',
+      'Multi-table simultaneous surveillance feed',
+      'Predictive confidence threshold scoring',
+      'Historical session telemetry archive',
+      'Dedicated priority desk support'
+    ],
+    isActive: true,
+    isVisible: true,
+    displayOrder: 3
+  },
+  {
+    id: 'PLAN_1_YEAR',
+    name: '1 Year VIP Annual',
+    badge: 'MAXIMUM VALUE',
+    description: '365 days of elite European Roulette intelligence for dedicated professionals.',
+    priceUsd: 1000,
+    priceCents: 100000,
+    duration: { unit: 'MONTHS', value: 12 },
+    durationDays: 365,
+    features: [
+      'Everything in 6 Months Elite',
+      'Zero latency direct API predictive stream',
+      'Dedicated 1-on-1 founder support desk',
+      'Early access to experimental predictive algorithms',
+      'Guaranteed 24/7 uninterrupted uptime SLA'
+    ],
+    isActive: true,
+    isVisible: true,
+    displayOrder: 4
+  }
+];
+
 /**
  * Returns the exact days in a given month of a given year,
  * correctly handling 28/29 days in February for leap years.

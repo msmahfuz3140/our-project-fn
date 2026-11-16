@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   ArrowRight,
   Sparkles,
-  Zap
+  Zap,
+  RefreshCw,
+  Coins
 } from 'lucide-react';
 import { authClient, PurchaseOrderResult, OrderDetails } from '../lib/auth-client';
 import { SubscriptionPlan, formatCentsToUsd } from '../shared/plans';
@@ -28,6 +30,7 @@ export interface CryptoOption {
   symbol: string;
   iconBg: string;
   badge?: string;
+  minUsdNotice?: string;
 }
 
 export const CRYPTO_OPTIONS: CryptoOption[] = [
@@ -37,56 +40,65 @@ export const CRYPTO_OPTIONS: CryptoOption[] = [
     network: 'TRON (TRC-20)',
     symbol: '₮',
     iconBg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    badge: 'Recommended • Fast & Low Fee'
-  },
-  {
-    id: 'BTC',
-    name: 'Bitcoin',
-    network: 'Bitcoin (BTC)',
-    symbol: '₿',
-    iconBg: 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-  },
-  {
-    id: 'ETH',
-    name: 'Ethereum',
-    network: 'Ethereum (ERC-20)',
-    symbol: 'Ξ',
-    iconBg: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-  },
-  {
-    id: 'USDTERC20',
-    name: 'USDT',
-    network: 'Ethereum (ERC-20)',
-    symbol: '₮',
-    iconBg: 'bg-teal-500/20 text-teal-400 border-teal-500/30'
-  },
-  {
-    id: 'LTC',
-    name: 'Litecoin',
-    network: 'Litecoin (LTC)',
-    symbol: 'Ł',
-    iconBg: 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+    badge: 'Fast & Low Fee',
+    minUsdNotice: 'Min ~$12'
   },
   {
     id: 'TRX',
     name: 'Tron',
     network: 'Tron (TRX)',
     symbol: '◈',
-    iconBg: 'bg-red-500/20 text-red-400 border-red-500/30'
+    iconBg: 'bg-red-500/20 text-red-400 border-red-500/30',
+    badge: 'Micro-payments (Min $0.20)',
+    minUsdNotice: 'Min $0.20'
+  },
+  {
+    id: 'BTC',
+    name: 'Bitcoin',
+    network: 'Bitcoin (BTC)',
+    symbol: '₿',
+    iconBg: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    minUsdNotice: 'Min ~$2'
+  },
+  {
+    id: 'ETH',
+    name: 'Ethereum',
+    network: 'Ethereum (ERC-20)',
+    symbol: 'Ξ',
+    iconBg: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+    minUsdNotice: 'Min ~$2'
+  },
+  {
+    id: 'LTC',
+    name: 'Litecoin',
+    network: 'Litecoin (LTC)',
+    symbol: 'Ł',
+    iconBg: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    minUsdNotice: 'Min $0.80'
+  },
+  {
+    id: 'USDTERC20',
+    name: 'USDT',
+    network: 'Ethereum (ERC-20)',
+    symbol: '₮',
+    iconBg: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+    minUsdNotice: 'Min ~$15'
   },
   {
     id: 'SOL',
     name: 'Solana',
     network: 'Solana (SOL)',
     symbol: '◎',
-    iconBg: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+    iconBg: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    minUsdNotice: 'Min ~$2'
   },
   {
     id: 'BNBBSC',
     name: 'BNB',
     network: 'BNB Chain (BEP-20)',
     symbol: 'BNB',
-    iconBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+    iconBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    minUsdNotice: 'Min ~$3'
   }
 ];
 
@@ -97,7 +109,14 @@ interface CryptoPaymentModalProps {
 
 export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
   const { refreshUser } = useAuth();
-  const [selectedCoin, setSelectedCoin] = useState<CryptoOption>(CRYPTO_OPTIONS[0]);
+  
+  // Smart initial coin: if the plan price is under $12, use TRX (Tron) by default
+  // because NOWPayments requires minimum ~$11.30 for USDT-TRC20.
+  const defaultCoin = (plan.priceUsd < 12 || plan.priceCents < 1200)
+    ? CRYPTO_OPTIONS.find((c) => c.id === 'TRX') || CRYPTO_OPTIONS[1]
+    : CRYPTO_OPTIONS[0];
+
+  const [selectedCoin, setSelectedCoin] = useState<CryptoOption>(defaultCoin);
   const [order, setOrder] = useState<PurchaseOrderResult | OrderDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +128,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
   const isFulfilledRef = useRef<boolean>(false);
   const activeOrderRef = useRef<string | null>(null);
 
-  // Initialize or switch currency
+  // Initialize payment order and generate QR code
   const initPayment = useCallback(async (coin: CryptoOption) => {
     setLoading(true);
     setError(null);
@@ -121,15 +140,18 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
       activeOrderRef.current = result.orderId;
 
       if (result.payAddress) {
+        // Generate crisp, edge-to-edge QR code (margin: 0 ensures it completely fills the white box)
         const qr = await QRCode.toDataURL(result.payAddress, {
-          margin: 1,
-          width: 240,
+          margin: 0,
+          width: 360,
           color: {
             dark: '#000000',
             light: '#ffffff'
           }
         });
         setQrDataUrl(qr);
+      } else {
+        setError(`NOWPayments did not return a deposit address for ${coin.name}. Please select TRX or LTC, or open the hosted payment page.`);
       }
     } catch (err: any) {
       setError(err?.message || 'Unable to generate cryptocurrency deposit address. Please retry.');
@@ -142,7 +164,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
     void initPayment(selectedCoin);
   }, [selectedCoin, initPayment]);
 
-  // Live polling for payment completion
+  // Real-time polling for payment completion
   useEffect(() => {
     if (!order?.orderId || isFulfilledRef.current) return;
 
@@ -188,8 +210,8 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 bg-emerald-950/95 border border-emerald-500/60 text-white px-5 py-3 rounded-2xl shadow-[0_0_40px_rgba(16,185,129,0.35)] animate-in slide-in-from-top-4 duration-300">
-          <div className="p-1 rounded-full bg-emerald-500 text-black">
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 bg-emerald-950/95 border border-emerald-500/60 text-white px-5 py-3 rounded-2xl shadow-[0_0_40px_rgba(16,185,129,0.4)] animate-in slide-in-from-top-4 duration-300">
+          <div className="p-1.5 rounded-full bg-emerald-500 text-black">
             <Check className="h-4 w-4 stroke-[3]" />
           </div>
           <div>
@@ -200,14 +222,14 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
       )}
 
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border border-amber-500/25 bg-[#0a0d14] p-5 sm:p-7 shadow-[0_0_60px_rgba(245,158,11,0.15)] text-slate-100 scrollbar-thin scrollbar-thumb-white/10">
+      <div className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border border-amber-500/30 bg-[#0a0d14] p-5 sm:p-7 shadow-[0_0_60px_rgba(245,158,11,0.2)] text-slate-100 scrollbar-thin scrollbar-thumb-white/10">
         
         {/* Glow ambient background */}
         <div className="absolute top-0 right-1/4 w-72 h-36 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 left-1/4 w-72 h-36 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
 
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-white/10 pb-4 mb-5">
+        <div className="flex items-start justify-between border-b border-white/10 pb-4 mb-4">
           <div>
             <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300 mb-1.5">
               <Zap className="h-3 w-3 text-amber-400" />
@@ -217,7 +239,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
               {plan.name}
             </h3>
             <p className="text-xs text-slate-400">
-              {plan.duration?.value ? `${plan.duration.value} ${plan.duration.unit.toLowerCase()}` : `${plan.durationDays} Days`} Access • Fixed Valuation <span className="font-bold text-amber-400">${formatCentsToUsd(plan.priceCents)} USD</span>
+              {plan.duration?.value ? `${plan.duration.value} ${plan.duration.unit.toLowerCase()}` : `${plan.durationDays} Days`} Access • Valuation <span className="font-bold text-amber-400">${formatCentsToUsd(plan.priceCents)} USD</span>
             </p>
           </div>
 
@@ -232,10 +254,18 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
 
         {/* Currency Selection Tabs */}
         {!isComplete && (
-          <div className="mb-5">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-2">
-              Select Payment Cryptocurrency:
-            </label>
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <Coins className="h-3.5 w-3.5 text-amber-400" />
+                Select Crypto Option:
+              </label>
+              {plan.priceUsd < 12 && (
+                <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  Tip: For $1 plans, use TRX or LTC
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {CRYPTO_OPTIONS.map((coin) => {
                 const isSelected = selectedCoin.id === coin.id;
@@ -247,7 +277,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
                       if (loading || isSelected) return;
                       setSelectedCoin(coin);
                     }}
-                    className={`relative flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
+                    className={`relative flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all ${
                       isSelected
                         ? 'border-amber-400 bg-amber-500/15 shadow-[0_0_15px_rgba(245,158,11,0.25)] text-white'
                         : 'border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/25 hover:text-white'
@@ -259,10 +289,10 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
                       </span>
                       <span className="text-xs font-bold text-white">{coin.name}</span>
                     </div>
-                    <span className="text-[10px] text-slate-400 truncate max-w-[95px]">{coin.network}</span>
-                    {coin.badge && (
-                      <span className="absolute -top-1.5 right-1 px-1.5 py-0.2 bg-amber-500 text-black text-[8px] font-black uppercase rounded-full">
-                        Hot
+                    <span className="text-[9px] text-slate-400 truncate max-w-[95px]">{coin.network}</span>
+                    {coin.id === 'TRX' && (
+                      <span className="absolute -top-1.5 right-1 px-1.5 py-0.2 bg-emerald-500 text-black text-[8px] font-black uppercase rounded-full">
+                        Min $0.20
                       </span>
                     )}
                   </button>
@@ -277,21 +307,45 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
           <div className="py-12 flex flex-col items-center justify-center text-center">
             <Loader2 className="h-10 w-10 text-amber-400 animate-spin mb-3" />
             <p className="text-sm font-bold text-white">Generating Dedicated Deposit Address...</p>
-            <p className="text-xs text-slate-400 mt-1">Connecting directly with NOWPayments liquidity gateway</p>
+            <p className="text-xs text-slate-400 mt-1">Requesting official NOWPayments liquidity address for {selectedCoin.name}</p>
           </div>
         )}
 
         {/* Error State */}
         {!loading && error && (
-          <div className="p-4 rounded-2xl border border-red-500/30 bg-red-950/20 text-center mb-4">
-            <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-            <p className="text-xs text-red-300 font-bold mb-3">{error}</p>
-            <button
-              onClick={() => initPayment(selectedCoin)}
-              className="px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors"
-            >
-              Retry Connection
-            </button>
+          <div className="p-4 rounded-2xl border border-amber-500/40 bg-amber-950/30 text-center mb-4">
+            <AlertCircle className="h-8 w-8 text-amber-400 mx-auto mb-2" />
+            <p className="text-xs text-amber-200 font-bold mb-3">{error}</p>
+            
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const trx = CRYPTO_OPTIONS.find((c) => c.id === 'TRX');
+                  if (trx) setSelectedCoin(trx);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-xs font-bold hover:brightness-110 shadow-lg transition-all"
+              >
+                👉 Switch to TRX (Tron - Min $0.20)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const ltc = CRYPTO_OPTIONS.find((c) => c.id === 'LTC');
+                  if (ltc) setSelectedCoin(ltc);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-500 transition-colors"
+              >
+                Switch to Litecoin
+              </button>
+              <button
+                type="button"
+                onClick={() => initPayment(selectedCoin)}
+                className="px-3 py-2 bg-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/20 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         )}
 
@@ -352,7 +406,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
           <div className="space-y-4">
             
             {/* Live Status Bar */}
-            <div className="flex items-center justify-between p-3 rounded-2xl border border-white/10 bg-black/40">
+            <div className="flex items-center justify-between p-2.5 rounded-2xl border border-white/10 bg-black/40">
               <div className="flex items-center gap-2.5">
                 <div className="relative flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -360,7 +414,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white">
-                    {status === 'CONFIRMING' ? 'Payment Detected — Confirming...' : 'Awaiting Payment Deposit'}
+                    {status === 'CONFIRMING' ? 'Payment Detected — Confirming blocks...' : 'Awaiting Payment Transfer'}
                   </p>
                   <p className="text-[10px] text-slate-400">
                     Auto-checking blockchain updates every 3.5s
@@ -369,50 +423,51 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
               </div>
 
               <div className="text-right">
-                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                  {selectedCoin.network}
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                  Network: {selectedCoin.network}
                 </span>
               </div>
             </div>
 
-            {/* Main QR Code & Amount Card */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.04] to-black/60">
+            {/* QR Code and Exact Amount Grid */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.05] via-black/60 to-black/80">
               
-              {/* QR Code Container */}
+              {/* QR Code Container - Sized to fill the white box edge-to-edge */}
               <div className="flex-shrink-0 flex flex-col items-center">
-                <div className="p-2.5 bg-white rounded-2xl shadow-[0_0_25px_rgba(255,255,255,0.15)]">
+                <div className="w-48 h-48 sm:w-52 sm:h-52 p-2 bg-white rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.25)] flex items-center justify-center overflow-hidden">
                   {qrDataUrl ? (
                     <img
                       src={qrDataUrl}
                       alt="Deposit QR Code"
-                      className="w-36 h-36 sm:w-40 sm:h-40 rounded-lg"
+                      className="w-full h-full object-contain block"
                     />
                   ) : (
-                    <div className="w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center bg-slate-100 text-slate-400">
-                      <QrCode className="h-10 w-10 animate-pulse" />
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-2 text-center">
+                      <QrCode className="h-10 w-10 animate-pulse mb-1 text-slate-500" />
+                      <span className="text-[10px] text-slate-500 font-semibold">Generating QR...</span>
                     </div>
                   )}
                 </div>
-                <span className="text-[9px] text-slate-400 mt-1.5 tracking-tight">
-                  Scan with crypto wallet
+                <span className="text-[10px] text-slate-400 mt-1.5 font-medium tracking-tight">
+                  Scan QR with Binance, Trust Wallet, etc.
                 </span>
               </div>
 
-              {/* Exact Amount and Copy */}
+              {/* Exact Amount and Details */}
               <div className="flex-1 w-full space-y-3">
                 <div>
                   <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
                     Send Exactly This Amount:
                   </span>
-                  <div className="flex items-center justify-between gap-2 mt-1 p-2.5 rounded-xl border border-amber-500/30 bg-black/60">
+                  <div className="flex items-center justify-between gap-2 mt-1 p-2.5 rounded-xl border border-amber-500/40 bg-black/70 shadow-inner">
                     <div className="truncate">
-                      <span className="font-mono text-base sm:text-lg font-black text-amber-400">
+                      <span className="font-mono text-lg sm:text-xl font-black text-amber-400">
                         {order.payAmount ?? plan.priceUsd}{' '}
                       </span>
-                      <span className="text-xs font-bold text-slate-300">
+                      <span className="text-xs font-black text-white">
                         {selectedCoin.name}
                       </span>
-                      <span className="text-[10px] text-slate-500 ml-1.5">
+                      <span className="text-[10px] text-slate-400 ml-1.5 block sm:inline">
                         (~${formatCentsToUsd(plan.priceCents)} USD)
                       </span>
                     </div>
@@ -420,17 +475,17 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
                     <button
                       type="button"
                       onClick={() => handleCopy(String(order.payAmount ?? plan.priceUsd), 'amount')}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-bold transition-colors"
+                      className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 text-xs font-bold transition-all"
                     >
                       {copiedField === 'amount' ? (
                         <>
-                          <Check className="h-3.5 w-3.5 text-emerald-400" />
-                          <span className="text-[10px] text-emerald-400">Copied</span>
+                          <Check className="h-3.5 w-3.5 text-emerald-400 stroke-[3]" />
+                          <span className="text-[11px] text-emerald-400 font-bold">Copied!</span>
                         </>
                       ) : (
                         <>
                           <Copy className="h-3.5 w-3.5" />
-                          <span className="text-[10px]">Copy</span>
+                          <span className="text-[11px]">Copy Amount</span>
                         </>
                       )}
                     </button>
@@ -438,52 +493,68 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
                 </div>
 
                 {/* Important Network Notice */}
-                <div className="p-2.5 rounded-xl border border-amber-500/15 bg-amber-500/[0.05] text-[11px] text-slate-300 space-y-1">
+                <div className="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.08] text-[11px] text-slate-200 space-y-1">
                   <p className="flex items-center gap-1.5 font-bold text-amber-300">
-                    <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
+                    <ShieldCheck className="h-4 w-4 text-amber-400" />
                     Network: {selectedCoin.network}
                   </p>
-                  <p className="text-[10px] text-slate-400">
-                    Transfer strictly via the specified network to prevent token loss.
+                  <p className="text-[10px] text-slate-400 leading-normal">
+                    Transfer strictly via the specified network to prevent permanent loss.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Deposit Address Box */}
-            {order.payAddress && (
-              <div>
-                <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">
-                  Deposit Address:
+            {/* Official Deposit Address Card - Highlighted & Unmissable */}
+            <div className="p-3.5 rounded-2xl border-2 border-amber-500/40 bg-black/70 shadow-[0_0_20px_rgba(245,158,11,0.1)]">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] uppercase tracking-wider font-extrabold text-amber-400 flex items-center gap-1">
+                  <span>NOWPayments Deposit Address:</span>
                 </label>
-                <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-white/10 bg-black/60">
-                  <p className="font-mono text-xs text-white truncate select-all pr-2">
+                <span className="text-[10px] text-slate-400">
+                  {selectedCoin.network}
+                </span>
+              </div>
+
+              {order.payAddress ? (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2 rounded-xl border border-white/15 bg-white/[0.04]">
+                  <p className="font-mono text-xs sm:text-[13px] font-bold text-white break-all select-all pr-2">
                     {order.payAddress}
                   </p>
                   <button
                     type="button"
                     onClick={() => handleCopy(order.payAddress!, 'address')}
-                    className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 text-xs font-bold transition-colors"
+                    className="flex-shrink-0 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all cursor-pointer"
                   >
                     {copiedField === 'address' ? (
                       <>
-                        <Check className="h-3.5 w-3.5 text-emerald-400" />
-                        <span className="text-[11px] text-emerald-400">Copied!</span>
+                        <Check className="h-4 w-4 text-black stroke-[3]" />
+                        <span>Copied!</span>
                       </>
                     ) : (
                       <>
-                        <Copy className="h-3.5 w-3.5" />
-                        <span className="text-[11px]">Copy Address</span>
+                        <Copy className="h-4 w-4" />
+                        <span>Copy Address</span>
                       </>
                     )}
                   </button>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="p-3 text-center text-xs text-amber-300">
+                  <p>Deposit address not generated yet.</p>
+                  <button
+                    onClick={() => initPayment(selectedCoin)}
+                    className="mt-2 text-xs font-bold text-amber-400 underline"
+                  >
+                    Click to refresh
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Hosted Page Alternative & Order Info */}
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-white/5 text-[11px] text-slate-400">
-              <span className="font-mono text-[10px]">Order: {order.orderId}</span>
+              <span className="font-mono text-[10px]">Order ID: {order.orderId}</span>
               
               {order.checkoutUrl && order.checkoutUrl.startsWith('http') && !order.checkoutUrl.includes('localhost') && (
                 <a
