@@ -255,6 +255,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 export interface PurchaseOrderResult {
   orderId: string;
   paymentId: string;
+  providerPaymentId?: string;
   providerInvoiceId?: string;
   planId: string;
   planName: string;
@@ -265,8 +266,10 @@ export interface PurchaseOrderResult {
   payAddress?: string;
   payAmount?: number;
   payCurrency: string;
+  network?: string;
   paymentMode?: 'LIVE' | 'SANDBOX' | 'SIMULATION';
   simulated?: boolean;
+  expiresAt?: string;
   createdAt: string;
 }
 
@@ -291,6 +294,9 @@ export interface OrderDetails {
   actuallyPaid?: number;
   payAmount?: number;
   payCurrency?: string;
+  payAddress?: string;
+  network?: string;
+  expiresAt?: string;
   paymentMethod?: string;
   transactionId?: string;
   checkoutUrl?: string;

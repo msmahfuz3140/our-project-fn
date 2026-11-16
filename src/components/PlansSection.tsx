@@ -22,6 +22,7 @@ import {
 import { SubscriptionPlan, formatCentsToUsd } from '../shared/plans';
 import { authClient } from '../lib/auth-client';
 import { useAuth } from '../context/AuthContext';
+import { CryptoPaymentModal } from './CryptoPaymentModal';
 
 interface TierConfig {
   icon: React.ComponentType<{ className?: string }>;
@@ -162,6 +163,7 @@ export function PlansSection() {
   const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'monthly' | 'vip'>('all');
+  const [selectedPlanForModal, setSelectedPlanForModal] = useState<SubscriptionPlan | null>(null);
 
   const loadPlans = async () => {
     setPlansLoading(true);
@@ -184,7 +186,21 @@ export function PlansSection() {
     void loadPlans();
   }, []);
 
-  const handleSelectPlan = async (plan: SubscriptionPlan) => {
+  // Auto-open modal if URL query specifies plan
+  useEffect(() => {
+    if (typeof window !== 'undefined' && plans.length > 0 && isAuthenticated) {
+      const params = new URLSearchParams(window.location.search);
+      const planParam = params.get('plan');
+      if (planParam) {
+        const found = plans.find((p) => p.id === planParam);
+        if (found) {
+          setSelectedPlanForModal(found);
+        }
+      }
+    }
+  }, [plans, isAuthenticated]);
+
+  const handleSelectPlan = (plan: SubscriptionPlan) => {
     setError(null);
 
     if (!isAuthenticated) {
@@ -192,19 +208,8 @@ export function PlansSection() {
       return;
     }
 
-    setLoadingPlanId(plan.id);
-
-    try {
-      const order = await authClient.createPurchaseOrder(plan.id);
-      if (order.checkoutUrl && order.checkoutUrl.startsWith('http') && !order.checkoutUrl.includes('localhost')) {
-        window.location.assign(order.checkoutUrl);
-      } else {
-        router.push(`/checkout/pending?orderId=${order.orderId}`);
-      }
-    } catch (err: any) {
-      setError(err?.message || 'Could not initiate purchase order. Please try again.');
-      setLoadingPlanId(null);
-    }
+    // Direct in-app crypto payment modal with address, amount, QR code, and real-time status
+    setSelectedPlanForModal(plan);
   };
 
   const formatDurationLabel = (plan: SubscriptionPlan) => {
@@ -559,6 +564,14 @@ export function PlansSection() {
           </div>
         </div>
       </div>
+
+      {/* Direct In-App Cryptocurrency Payment Modal */}
+      {selectedPlanForModal && (
+        <CryptoPaymentModal
+          plan={selectedPlanForModal}
+          onClose={() => setSelectedPlanForModal(null)}
+        />
+      )}
     </section>
   );
 }
