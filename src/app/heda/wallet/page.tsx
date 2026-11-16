@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Percent,
+  Settings2
 } from 'lucide-react';
 import { authClient } from '../../../lib/auth-client';
 import { useDebounce } from '../../../hooks/useDebounce';
@@ -47,7 +49,8 @@ export default function AdminWalletPage() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 350);  const [typeFilter, setTypeFilter] = useState('ALL');
+  const debouncedSearch = useDebounce(search, 350);
+  const [typeFilter, setTypeFilter] = useState('ALL');
   const [txStatusFilter, setTxStatusFilter] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -64,6 +67,15 @@ export default function AdminWalletPage() {
   const [adjustReason, setAdjustReason] = useState('');
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const [adjustError, setAdjustError] = useState('');
+
+  const [commissionTarget, setCommissionTarget] = useState<any | null>(null);
+  const [commissionRate, setCommissionRate] = useState('');
+  const [commissionType, setCommissionType] = useState<'DEFAULT' | 'ONE_TIME' | 'LIFETIME'>('DEFAULT');
+  const [commissionEligible, setCommissionEligible] = useState(true);
+  const [useDefaultRate, setUseDefaultRate] = useState(false);
+  const [commissionReason, setCommissionReason] = useState('');
+  const [commissionSubmitting, setCommissionSubmitting] = useState(false);
+  const [commissionError, setCommissionError] = useState('');
 
   useEffect(() => {
     const querySearch = searchParams.get('search');
@@ -154,6 +166,59 @@ export default function AdminWalletPage() {
       setAdjustError(err?.message || 'Wallet adjustment failed.');
     } finally {
       setAdjustSubmitting(false);
+    }
+  };
+
+  const openCommissionEditor = (entry: any) => {
+    setCommissionTarget(entry);
+    setCommissionRate(String(Math.round(Number(entry.referral.commissionRate || 0) * 10000) / 100));
+    setCommissionType(
+      entry.referral.commissionType === 'LIFETIME'
+        ? 'LIFETIME'
+        : entry.referral.commissionType === 'ONE_TIME'
+        ? 'ONE_TIME'
+        : 'DEFAULT'
+    );
+    setCommissionEligible(entry.referral.referralEligible !== false);
+    setUseDefaultRate(false);
+    setCommissionReason('');
+    setCommissionError('');
+    setMessage(null);
+  };
+
+  const submitCommissionSettings = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!commissionTarget) return;
+
+    const percent = Number(commissionRate);
+    if (!useDefaultRate && (!Number.isFinite(percent) || percent < 0 || percent > 90)) {
+      setCommissionError('Commission percentage must be between 0 and 90.');
+      return;
+    }
+    if (commissionReason.trim().length < 3) {
+      setCommissionError('A clear audit reason is required for this change.');
+      return;
+    }
+
+    setCommissionSubmitting(true);
+    setCommissionError('');
+    try {
+      await authClient.updateAdminUserProfile(commissionTarget.user.id, {
+        referralCommissionRate: useDefaultRate ? null : Math.round(percent) / 100,
+        referralCommissionType: commissionType === 'DEFAULT' ? null : commissionType,
+        referralEligible: commissionEligible,
+        reason: commissionReason.trim()
+      });
+      setMessage({
+        type: 'success',
+        text: `Referral commission settings updated for ${commissionTarget.user.email}. New settings apply to future purchases only.`
+      });
+      setCommissionTarget(null);
+      await load(true);
+    } catch (err: any) {
+      setCommissionError(err?.message || 'Could not update referral commission settings.');
+    } finally {
+      setCommissionSubmitting(false);
     }
   };
 
@@ -363,6 +428,13 @@ export default function AdminWalletPage() {
                       <td className="px-4 py-4">
                         <div className="flex justify-end gap-1.5">
                           <button
+                            onClick={() => openCommissionEditor(entry)}
+                            className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-1.5 text-amber-300 hover:bg-amber-500/20"
+                            title="Edit referral commission rate and type"
+                          >
+                            <Percent className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => openAdjust(entry, 'ADD')}
                             className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-1.5 text-emerald-300 hover:bg-emerald-500/20"
                             title="Add balance"
@@ -509,6 +581,187 @@ export default function AdminWalletPage() {
                 }`}
               >
                 {adjustSubmitting ? 'Saving…' : adjustDirection === 'ADD' ? 'Add Balance' : 'Deduct Balance'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {commissionTarget && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={submitCommissionSettings}
+            className="max-h-[92vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl border border-amber-500/30 bg-[#070b14] p-5 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-amber-400" />
+                <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                  Referral Commission Settings
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCommissionTarget(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-black/30 p-3 text-xs">
+              <div className="text-white">{commissionTarget.user.name}</div>
+              <div className="text-slate-400">{commissionTarget.user.email}</div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="inline-flex rounded border border-slate-700 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-slate-400">
+                  {commissionTarget.user.role || 'USER'}
+                </span>
+                <span className="font-mono text-[10px] text-amber-300">
+                  {commissionTarget.user.referralCode || '—'}
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  {commissionTarget.referral.totalReferredUsers} referred ·{' '}
+                  {commissionTarget.referral.successfulReferrals} paid
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Commission Percentage
+                </label>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                    commissionTarget.user.referralCommissionRate !== undefined &&
+                    commissionTarget.user.referralCommissionRate !== null
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                      : 'border-slate-700 bg-slate-800/60 text-slate-400'
+                  }`}
+                >
+                  {commissionTarget.user.referralCommissionRate !== undefined &&
+                  commissionTarget.user.referralCommissionRate !== null
+                    ? 'Custom override'
+                    : 'Role default'}
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="90"
+                  step="0.5"
+                  required={!useDefaultRate}
+                  disabled={useDefaultRate}
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 pr-9 font-mono text-sm text-white focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-500">
+                  %
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] text-slate-500">
+                Role defaults: normal users 30% one-time, moderators 50% lifetime. Allowed range 0–90%.
+              </p>
+              <label className="mt-2 flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/50 px-2.5 py-2">
+                <input
+                  type="checkbox"
+                  checked={useDefaultRate}
+                  onChange={(e) => setUseDefaultRate(e.target.checked)}
+                  className="h-4 w-4 accent-amber-500"
+                />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                  Remove custom rate and use the role / platform default
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Commission Earning Type
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { value: 'ONE_TIME' as const, label: 'One-Time' },
+                  { value: 'LIFETIME' as const, label: 'Lifetime' },
+                  { value: 'DEFAULT' as const, label: 'Role Default' }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setCommissionType(option.value)}
+                    className={`rounded-xl border px-2 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
+                      commissionType === option.value
+                        ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-slate-500">
+                <span className="font-bold text-slate-400">One-Time:</span> pay once per referred customer on their
+                first eligible purchase. <span className="font-bold text-slate-400">Lifetime:</span> pay on every
+                eligible purchase and renewal. Role default uses{' '}
+                {commissionTarget.user.role === 'MODERATOR' ? 'lifetime for moderators' : 'one-time for normal users'}.
+              </p>
+            </div>
+
+            <label className="flex items-start gap-2 rounded-lg border border-slate-800 bg-slate-900/50 px-2.5 py-2">
+              <input
+                type="checkbox"
+                checked={commissionEligible}
+                onChange={(e) => setCommissionEligible(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-emerald-500"
+              />
+              <span className="text-[10px] leading-relaxed text-slate-300">
+                <span className="block font-bold uppercase tracking-wider text-slate-200">Referral eligible</span>
+                Unchecking immediately stops all future commission for this account. Existing credited commissions are
+                untouched.
+              </span>
+            </label>
+
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                Reason for change *
+              </label>
+              <textarea
+                rows={2}
+                required
+                value={commissionReason}
+                onChange={(e) => setCommissionReason(e.target.value)}
+                placeholder="Recorded in the permanent audit trail"
+                className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+
+            {commissionError && (
+              <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {commissionError}
+              </div>
+            )}
+
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[10px] leading-relaxed text-amber-200/80">
+              New rate and earning type apply to future purchases only. Commission rate, type and eligibility are
+              snapshotted when each order is created, so completed commissions and past payments are never rewritten.
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-800 pt-3">
+              <button
+                type="button"
+                onClick={() => setCommissionTarget(null)}
+                className="rounded-xl border border-slate-700 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={commissionSubmitting}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black disabled:opacity-50"
+              >
+                {commissionSubmitting ? 'Saving…' : 'Save Settings'}
               </button>
             </div>
           </form>

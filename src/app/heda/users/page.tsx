@@ -249,9 +249,10 @@ export default function AdminUsersPage() {
           : storedModeratorRate
         : 50
     );
+    const rawReferralRate = (u as any).referralCommissionRate;
     setEditReferralRate(
-      (u as any).referralCommissionRate !== undefined
-        ? String((u as any).referralCommissionRate)
+      rawReferralRate !== undefined && rawReferralRate !== null
+        ? String(Math.round(Number(rawReferralRate) * 10000) / 100)
         : ''
     );
     setEditReferralType(((u as any).referralCommissionType as any) || 'DEFAULT');
@@ -406,8 +407,9 @@ export default function AdminUsersPage() {
         mustChangePassword: editPassword ? editMustChangePassword : undefined,
         role: editRole,
         moderatorCommissionRate: editRole === 'MODERATOR' ? Number(editCommissionRate) : undefined,
-        referralCommissionRate: editReferralRate.trim() === '' ? undefined : Number(editReferralRate),
-        referralCommissionType: editReferralType === 'DEFAULT' ? undefined : editReferralType,
+        referralCommissionRate:
+          editReferralRate.trim() === '' ? null : Number(editReferralRate) / 100,
+        referralCommissionType: editReferralType === 'DEFAULT' ? null : editReferralType,
         referralEligible: editReferralEligible,
         isEmailVerified: editIsEmailVerified,
         isPhoneVerified: editIsPhoneVerified,
@@ -1659,8 +1661,9 @@ export default function AdminUsersPage() {
                     <div className="rounded-lg border border-white/5 bg-black/20 p-2.5">
                       <p className="text-[9px] uppercase tracking-wider text-slate-500">Commission Rate</p>
                       <p className="mt-1 text-sm font-bold text-amber-300">
-                        {detailedUser.user?.referralCommissionRate !== undefined
-                          ? `${Math.round(detailedUser.user.referralCommissionRate * 100)}%`
+                        {detailedUser.user?.referralCommissionRate !== undefined &&
+                        detailedUser.user?.referralCommissionRate !== null
+                          ? `${Math.round(detailedUser.user.referralCommissionRate * 1000) / 10}%`
                           : detailedUser.user?.role === 'MODERATOR'
                           ? '50% default'
                           : '30% default'}
@@ -2026,19 +2029,26 @@ export default function AdminUsersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-                    Custom Commission Rate (0–1)
+                    Custom Commission Percentage
                   </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={editReferralRate}
-                    onChange={(e) => setEditReferralRate(e.target.value)}
-                    placeholder={editRole === 'MODERATOR' ? 'Default 0.50' : 'Default 0.30'}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
-                  />
-                  <p className="mt-1 text-[10px] text-slate-500">Blank uses the role/platform default for future sales.</p>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      max={90}
+                      step={0.5}
+                      value={editReferralRate}
+                      onChange={(e) => setEditReferralRate(e.target.value)}
+                      placeholder={editRole === 'MODERATOR' ? 'Default 50' : 'Default 30'}
+                      className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 pr-8 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-500">
+                      %
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    Blank uses the role/platform default. Changes apply to future sales only.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
@@ -2053,7 +2063,9 @@ export default function AdminUsersPage() {
                     <option value="ONE_TIME">One-Time</option>
                     <option value="LIFETIME">Lifetime</option>
                   </select>
-                  <p className="mt-1 text-[10px] text-slate-500">Changes apply to future commissions only.</p>
+                  <p className="mt-1 text-[10px] text-slate-500">
+                    One-time pays once per referred customer; lifetime pays on every purchase.
+                  </p>
                 </div>
               </div>
             </div>
