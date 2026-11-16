@@ -150,6 +150,8 @@ export default function AdminPaymentsPage() {
   const debouncedSearch = useDebounce(search, 350);
   const [isLoading, setIsLoading] = useState(true);
   const [actionError, setActionError] = useState('');
+  const [reconciling, setReconciling] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState('');
   const [manualAction, setManualAction] = useState<'approve' | 'reject' | null>(null);
   const [manualReason, setManualReason] = useState('');
   const [manualSubmitting, setManualSubmitting] = useState(false);
@@ -183,6 +185,9 @@ export default function AdminPaymentsPage() {
     }
   }, []);
 
+  // Automatically reconcile pending orders with NOWPayments while the admin
+  // ledger is open. This removes the need to approve each successful payment
+  // manually when a webhook was delayed or missing.
   const fetchOrders = useCallback(async (silent: boolean = false) => {
     if (!silent) setIsLoading(true);
     if (!silent) setActionError('');
@@ -204,6 +209,56 @@ export default function AdminPaymentsPage() {
       if (!silent) setIsLoading(false);
     }
   }, [page, statusFilter, debouncedSearch]);
+
+  const reconcilePending = useCallback(async (silent = false) => {
+    if (reconciling) return;
+    if (!silent) {
+      setReconciling(true);
+      setActionError('');
+      setActionSuccess('');
+    }
+    try {
+      const result = await authClient.reconcileAdminPayments(25);
+      if (!silent) {
+        setActionSuccess(
+          result?.message ||
+            `Reconciliation complete: ${result?.fulfilled || 0} activated.`
+        );
+      }
+      await Promise.all([fetchOrders(true), fetchSummary()]);
+    } catch (err: any) {
+      if (!silent) setActionError(err?.message || 'Pending payment reconciliation failed.');
+    } finally {
+      if (!silent) setReconciling(false);
+    }
+  }, [reconciling, fetchOrders, fetchSummary]);
+
+  // Automatically reconcile pending orders with NOWPayments while the admin
+  // ledger is open. This removes the need to approve each successful payment
+  // manually when a webhook was delayed or missing.
+  useEffect(() => {
+    let cancelled = false;
+
+    const reconcile = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        await authClient.reconcileAdminPayments(15);
+        if (!cancelled) {
+          await fetchOrders(true);
+          await fetchSummary();
+        }
+      } catch {
+        // Background reconciliation is best-effort; manual controls remain.
+      }
+    };
+
+    void reconcile();
+    const timer = setInterval(reconcile, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [fetchOrders, fetchSummary]);
 
   useEffect(() => {
     fetchSummary();
@@ -322,6 +377,15 @@ export default function AdminPaymentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => reconcilePending()}
+            disabled={reconciling}
+            className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            title="Verify all pending orders directly with NOWPayments"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${reconciling ? 'animate-spin' : ''}`} />
+            {reconciling ? 'Syncing…' : 'Sync Pending'}
+          </button>
           <button
             onClick={handleExportCsv}
             className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-200 hover:bg-slate-700 transition-colors shadow-sm"
@@ -476,6 +540,16 @@ export default function AdminPaymentsPage() {
               <div className="mt-1 text-[9px] font-mono text-slate-500">
                 Last 24h: {health.webhook?.processed24h ?? 0} processed / {health.webhook?.failed24h ?? 0} failed
               </div>
+              {(health.webhook?.failed24h ?? 0) > 0 && (
+                <div className="mt-1 text-[9px] text-rose-400">
+                  Rejected webhook events detected — verify the NOWPayments IPN secret and callback URL.
+                </div>
+              )}
+              {health.webhook?.lastEventAt && (
+                <div className="mt-1 text-[9px] text-slate-500">
+                  Last event: {new Date(health.webhook.lastEventAt).toLocaleString()}
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
@@ -555,6 +629,20 @@ export default function AdminPaymentsPage() {
       {actionError && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">
           {actionError}
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
+          <span>{actionSuccess}</span>
+          <button
+            type="button"
+            onClick={() => setActionSuccess('')}
+            className="text-emerald-400 hover:text-emerald-200"
+            aria-label="Dismiss message"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 

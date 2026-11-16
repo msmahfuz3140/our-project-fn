@@ -10,9 +10,7 @@ import {
   ShieldCheck,
   AlertCircle,
   QrCode,
-  CheckCircle2,
   ArrowRight,
-  Sparkles,
   Zap,
   Coins,
   Send,
@@ -25,6 +23,7 @@ import { authClient, PurchaseOrderResult, OrderDetails } from '../lib/auth-clien
 import { SubscriptionPlan, formatCentsToUsd } from '../shared/plans';
 import { useAuth } from '../context/AuthContext';
 import { usePublicSettings } from '../hooks/usePublicSettings';
+import { PaymentSuccessAnimation } from './PaymentSuccessAnimation';
 import Link from 'next/link';
 
 export interface CryptoOption {
@@ -163,7 +162,10 @@ function mapPaymentStatus(details: Partial<OrderDetails>): PaymentUiStatus {
   const status = String(details.status || '').toUpperCase();
 
   if (details.isFulfilled === true) return 'SUCCESS';
-  if (status === 'FINISHED') return 'REVIEW';
+  // FINISHED is final at the gateway. If fulfilment has not yet landed, keep the
+  // UI in a short "finalising" state while the backend retries activation; do
+  // not show an administrative review warning for a valid final payment.
+  if (status === 'FINISHED') return 'CONFIRMING';
   if (['CONFIRMING', 'CONFIRMED', 'SENDING'].includes(status)) return 'CONFIRMING';
   if (['PARTIALLY_PAID', 'REVIEW_REQUIRED'].includes(status)) return 'REVIEW';
   if (status === 'REFUNDED') return 'REFUNDED';
@@ -545,51 +547,37 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
 
         {/* STEP 2: Success */}
         {order && isComplete && (
-          <div className="py-8 flex flex-col items-center justify-center text-center">
-            <div className="relative mb-4">
-              <div className="w-20 h-20 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.4)]">
-                <CheckCircle2 className="h-12 w-12 text-emerald-400" />
-              </div>
-              <Sparkles className="h-6 w-6 text-amber-400 absolute -top-1 -right-1 animate-bounce" />
-            </div>
+          <div className="py-4">
+            <PaymentSuccessAnimation
+              planName={plan.name}
+              amountLabel={`${order.payAmount !== undefined ? order.payAmount : plan.priceUsd} ${selectedCoin?.name || ''}`.trim()}
+              expirationLabel={
+                (order as OrderDetails).subscription?.endDate
+                  ? new Date((order as OrderDetails).subscription!.endDate!).toLocaleString()
+                  : null
+              }
+            />
 
-            <h4 className="font-display text-xl sm:text-2xl font-black uppercase tracking-tight text-white mb-2">
-              Payment Successful
-            </h4>
-            <p className="text-xs sm:text-sm text-emerald-300 max-w-sm mb-6">
-              The gateway reported a verified, settled payment. Your {plan.name} subscription is now active.
-            </p>
-
-            <div className="w-full rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 mb-6 text-left space-y-1">
-              <div className="flex justify-between items-center text-xs py-1 border-b border-white/5">
-                <span className="text-slate-400">Purchased Plan:</span>
-                <span className="font-bold text-white">{plan.name}</span>
-              </div>
+            <div className="mt-2 w-full rounded-2xl border border-emerald-500/20 bg-black/30 p-4 text-left space-y-1">
               <div className="flex justify-between items-center text-xs py-1 border-b border-white/5">
                 <span className="text-slate-400">Order ID:</span>
                 <span className="font-mono text-amber-400">{order.orderId}</span>
               </div>
-              <div className="flex justify-between items-center text-xs py-1 border-b border-white/5">
+              <div className="flex justify-between items-center text-xs py-1">
                 <span className="text-slate-400">Transaction:</span>
                 <span className="max-w-[60%] break-all text-right font-mono text-slate-200">
                   {(order as any).transactionId || providerReference || '—'}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-xs py-1">
-                <span className="text-slate-400">Access Status:</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5" /> ACTIVE
-                </span>
-              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <div className="mt-5 flex flex-col gap-3 w-full sm:flex-row">
               <Link
-                href="/dashboard/tool"
+                href="/dashboard"
                 onClick={onClose}
-                className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-display text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all"
+                className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black font-display text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
               >
-                Launch Intelligence Tool <ArrowRight className="h-4 w-4" />
+                Go to Dashboard <ArrowRight className="h-4 w-4" />
               </Link>
               <button
                 onClick={onClose}

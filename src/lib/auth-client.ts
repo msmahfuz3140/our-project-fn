@@ -734,6 +734,13 @@ export const authClient = {
     return request<any>('/payments/admin/health', { bypassCache: true });
   },
 
+  async reconcileAdminPayments(limit?: number): Promise<any> {
+    return request<any>('/payments/admin/reconcile', {
+      method: 'POST',
+      body: JSON.stringify({ limit: limit || 25 })
+    });
+  },
+
   async getAdminPaymentDetails(orderId: string): Promise<any> {
     return request<any>(`/payments/admin/orders/${encodeURIComponent(orderId)}`, { bypassCache: true });
   },

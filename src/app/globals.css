@@ -477,6 +477,58 @@ aside p {
   background: rgba(245, 158, 11, 0.45);
 }
 
+/* Payment success animation */
+@keyframes successCircleDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes successCheckDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes successHaloPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.55; }
+  50% { transform: scale(1.18); opacity: 0.9; }
+}
+@keyframes confettiBurst {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.6);
+  }
+  12% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--tx, 0), var(--ty, 80px), 0) rotate(var(--rot, 220deg)) scale(1);
+  }
+}
+.success-check-circle {
+  stroke-dasharray: 280;
+  stroke-dashoffset: 280;
+  animation: successCircleDraw 0.75s ease-out forwards;
+}
+.success-check-mark {
+  stroke-dasharray: 90;
+  stroke-dashoffset: 90;
+  animation: successCheckDraw 0.5s 0.55s ease-out forwards;
+}
+.success-halo {
+  animation: successHaloPulse 2s ease-in-out infinite;
+}
+.success-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.confetti-piece {
+  position: absolute;
+  top: 40%;
+  width: 6px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--c, #10b981);
+  opacity: 0;
+  animation: confettiBurst 1.7s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0s) forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

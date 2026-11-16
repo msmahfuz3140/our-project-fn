@@ -81,16 +81,19 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
   }, [load]);
 
   useEffect(() => {
-    if (!order || TERMINAL_STATUSES.has(order.status)) return;
+    if (!order) return;
+    const finalising = order.status === 'FINISHED' && !order.isFulfilled;
+    if (TERMINAL_STATUSES.has(order.status) && !finalising) return;
 
     const timer = setInterval(() => {
       load(true);
     }, 6000);
 
     return () => clearInterval(timer);
-  }, [order?.status, load]);
+  }, [order?.status, order?.isFulfilled, load]);
 
-  const isFinished = order?.status === 'FINISHED' && Boolean(order.verified || order.isFulfilled);
+  const isFinished = order?.status === 'FINISHED' && order.isFulfilled === true;
+  const isFinalising = order?.status === 'FINISHED' && order.isFulfilled !== true;
   const isConfirmedOnly = order?.status === 'CONFIRMED';
   const isReview = order?.status === 'PARTIALLY_PAID' || order?.status === 'REVIEW_REQUIRED';
   const isFailed = order?.status === 'FAILED' || order?.status === 'EXPIRED';
@@ -101,6 +104,7 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
     order.checkoutUrl.startsWith('http') &&
     !order.checkoutUrl.includes('localhost') &&
     !isFinished &&
+    !isFinalising &&
     !isFailed &&
     !isRejected &&
     !isRefunded
@@ -232,6 +236,20 @@ export function PaymentStatusView({ mode }: { mode: PaymentStatusMode }) {
                     <p className="mx-auto max-w-md text-xs text-slate-400">
                       NOWPayments reached the final <span className="font-mono text-emerald-300">finished</span> state.
                       Your payment was independently verified by our server before access was granted.
+                    </p>
+                  </>
+                ) : isFinalising ? (
+                  <>
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-1.5 font-display text-[10px] font-black uppercase tracking-widest text-emerald-300">
+                      <Clock className="h-4 w-4 animate-pulse" />
+                      Finalising Your Access
+                    </div>
+                    <h1 className="mb-2 font-display text-2xl font-black uppercase text-white sm:text-3xl">
+                      Payment Confirmed
+                    </h1>
+                    <p className="mx-auto max-w-md text-xs text-slate-400">
+                      The gateway has reached final confirmation. Your subscription is being activated automatically;
+                      this page updates on its own.
                     </p>
                   </>
                 ) : isReview ? (
