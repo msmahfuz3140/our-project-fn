@@ -140,6 +140,7 @@ const NAV_SECTIONS: NavSection[] = [
           { name: 'Edit Support Info', href: '/heda/settings?tab=support', badge: 'TG' },
           { name: 'Website CMS Settings', href: '/heda/settings' },
           { name: 'Community Management', href: '/heda/settings?tab=website#community', badge: 'TG' },
+          { name: 'Payment & Support Settings', href: '/heda/settings?tab=website#payment-settings', badge: 'PAY' },
           { name: 'Announcement Campaigns', href: '/heda/notifications' }
         ]
       }

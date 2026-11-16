@@ -183,9 +183,9 @@ export default function AdminPaymentsPage() {
     }
   }, []);
 
-  const fetchOrders = useCallback(async () => {
-    setIsLoading(true);
-    setActionError('');
+  const fetchOrders = useCallback(async (silent: boolean = false) => {
+    if (!silent) setIsLoading(true);
+    if (!silent) setActionError('');
     try {
       const res = await authClient.getAdminOrders({
         page,
@@ -199,9 +199,9 @@ export default function AdminPaymentsPage() {
         setTotalPages(res.totalPages || 1);
       }
     } catch (err: any) {
-      setActionError(err.message || 'Failed to load payment orders');
+      if (!silent) setActionError(err.message || 'Failed to load payment orders');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [page, statusFilter, debouncedSearch]);
 
@@ -210,6 +210,18 @@ export default function AdminPaymentsPage() {
     fetchOrders();
     fetchHealth();
   }, [fetchSummary, fetchOrders, fetchHealth]);
+
+  // Keep the admin payment ledger fresh while the page is open. Silent
+  // background refreshes avoid replacing the table with a loading skeleton.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchOrders(true);
+        void fetchSummary();
+      }
+    }, 15_000);
+    return () => clearInterval(timer);
+  }, [fetchOrders, fetchSummary]);
 
   const openOrderDetails = async (orderId: string) => {
     setSelectedOrderId(orderId);

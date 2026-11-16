@@ -1581,7 +1581,7 @@ export default function AdminSubscriptionsPage() {
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="number"
-                    min={1}
+                    min={0.2}
                     step="any"
                     value={editPriceUsd}
                     onChange={(e) => setEditPriceUsd(parseFloat(e.target.value) || 0)}
@@ -1792,7 +1792,7 @@ export default function AdminSubscriptionsPage() {
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="number"
-                    min={1}
+                    min={0.2}
                     step="any"
                     value={createPriceUsd}
                     onChange={(e) => setCreatePriceUsd(parseFloat(e.target.value) || 0)}

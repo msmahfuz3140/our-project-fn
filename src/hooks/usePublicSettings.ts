@@ -18,6 +18,11 @@ export interface PublicWebsiteSettings {
     description?: string;
     buttonText?: string;
   };
+  paymentSettings?: {
+    minPlanPriceCents?: number;
+    paymentSupportEnabled?: boolean;
+    paymentSupportTelegram?: string;
+  };
   footerContent?: { copyrightText?: string; disclaimerText?: string };
   faqItems?: Array<{ question: string; answer: string; category?: string; order?: number }>;
   legalPolicies?: Record<string, string>;

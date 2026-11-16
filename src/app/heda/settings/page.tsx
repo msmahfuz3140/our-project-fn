@@ -66,6 +66,12 @@ export default function AdminSettingsPage() {
       }, 120);
       return () => clearTimeout(timer);
     }
+    if (typeof window !== 'undefined' && window.location.hash === '#payment-settings') {
+      const timer = setTimeout(() => {
+        document.getElementById('payment-settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+      return () => clearTimeout(timer);
+    }
   }, [loading, activeTab]);
 
   // Tool Settings State
@@ -353,9 +359,20 @@ export default function AdminSettingsPage() {
     setSaveError(null);
     setSaveSuccess(null);
     try {
-      const updated = await authClient.updateAdminWebsiteSettings(websiteSettings);
+      const minCents = Number(websiteSettings?.paymentSettings?.minPlanPriceCents ?? 20);
+      if (!Number.isFinite(minCents) || minCents < 20) {
+        throw new Error('Minimum plan price must be at least $0.20.');
+      }
+      const payload = {
+        ...websiteSettings,
+        paymentSettings: {
+          ...websiteSettings.paymentSettings,
+          minPlanPriceCents: Math.round(minCents)
+        }
+      };
+      const updated = await authClient.updateAdminWebsiteSettings(payload);
       setWebsiteSettings(updated);
-      setSaveSuccess('Website configuration and content sanitized and persisted successfully.');
+      setSaveSuccess('Website configuration, payment rules and content sanitized and persisted successfully.');
     } catch (err: any) {
       setSaveError(err?.message || 'Failed to save website configuration.');
     } finally {
@@ -1695,6 +1712,99 @@ export default function AdminSettingsPage() {
                     <p className="mt-1 text-[10px] text-slate-500">
                       HTML/scripts are stripped automatically. The section is hidden when disabled or the link is empty.
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment & Support Settings */}
+              <div id="payment-settings" className="rounded-2xl border border-emerald-400/20 bg-[#070c16]/80 p-6 backdrop-blur-xl space-y-4">
+                <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                  <DollarSign className="h-4 w-4 text-emerald-400" />
+                  <div>
+                    <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">
+                      Payment Settings & Support
+                    </h3>
+                    <p className="mt-0.5 text-[11px] text-slate-400">
+                      Backend-enforced minimum plan price and the Telegram button shown inside the crypto payment modal.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="font-display text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                      Minimum Plan Price (USD)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">$</span>
+                      <input
+                        type="number"
+                        min={0.2}
+                        step={0.01}
+                        value={((websiteSettings.paymentSettings?.minPlanPriceCents ?? 20) / 100).toFixed(2)}
+                        onChange={(e) => {
+                          const usd = parseFloat(e.target.value) || 0;
+                          setWebsiteSettings({
+                            ...websiteSettings,
+                            paymentSettings: {
+                              ...websiteSettings.paymentSettings,
+                              minPlanPriceCents: Math.round(usd * 100)
+                            }
+                          });
+                        }}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 py-2.5 pl-7 pr-3 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      Default $0.20. Applies to plan creation and every checkout on the backend; API manipulation cannot bypass it.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={websiteSettings.paymentSettings?.paymentSupportEnabled !== false}
+                        onChange={(e) =>
+                          setWebsiteSettings({
+                            ...websiteSettings,
+                            paymentSettings: {
+                              ...websiteSettings.paymentSettings,
+                              paymentSupportEnabled: e.target.checked
+                            }
+                          })
+                        }
+                        className="h-4 w-4 accent-emerald-500"
+                      />
+                      <span className="font-display text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                        Enable Payment Support button
+                      </span>
+                    </label>
+
+                    <div>
+                      <label className="font-display text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1">
+                        Payment Support Telegram / @handle
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={300}
+                        value={websiteSettings.paymentSettings?.paymentSupportTelegram || ''}
+                        onChange={(e) =>
+                          setWebsiteSettings({
+                            ...websiteSettings,
+                            paymentSettings: {
+                              ...websiteSettings.paymentSettings,
+                              paymentSupportTelegram: e.target.value
+                            }
+                          })
+                        }
+                        placeholder="@yoursupport"
+                        className="w-full rounded-xl border border-white/10 bg-black/40 p-2.5 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        Leave blank to use the existing Support Telegram in the card above.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
