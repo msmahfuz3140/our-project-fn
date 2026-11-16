@@ -174,7 +174,7 @@ function VerifyOtpContent() {
                 type="text"
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                placeholder="name@example.com or +14155552671"
+                placeholder="name@example.com or +447911123456"
                 className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
                 required
               />

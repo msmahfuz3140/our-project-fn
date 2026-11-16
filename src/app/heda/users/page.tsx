@@ -2205,7 +2205,7 @@ export default function AdminUsersPage() {
                   required
                   value={staffName}
                   onChange={(e) => setStaffName(e.target.value)}
-                  placeholder="e.g. Mahfuzul Haque"
+                  placeholder="e.g. John Doe"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
@@ -2220,7 +2220,7 @@ export default function AdminUsersPage() {
                   required
                   value={staffEmail}
                   onChange={(e) => setStaffEmail(e.target.value)}
-                  placeholder="e.g. admin@rollate.com"
+                  placeholder="e.g. staff@accuracy.tools"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
@@ -2234,7 +2234,7 @@ export default function AdminUsersPage() {
                   type="text"
                   value={staffPhone}
                   onChange={(e) => setStaffPhone(e.target.value)}
-                  placeholder="e.g. +8801700000000"
+                  placeholder="e.g. +447911123456"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
@@ -2308,7 +2308,7 @@ export default function AdminUsersPage() {
                   type="text"
                   value={staffNotes}
                   onChange={(e) => setStaffNotes(e.target.value)}
-                  placeholder="e.g. Telegram: @partner_mod, Region: BD"
+                  placeholder="e.g. Telegram: @partner_mod, Region: UK"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>

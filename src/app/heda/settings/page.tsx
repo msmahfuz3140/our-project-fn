@@ -1911,7 +1911,7 @@ export default function AdminSettingsPage() {
                             supportContact: { ...websiteSettings.supportContact, email: e.target.value }
                           })
                         }
-                        placeholder="support@rouletteaccuracy.com"
+                        placeholder="support@accuracy.tools"
                         className="w-full rounded-xl border border-white/10 bg-black/40 p-3 font-mono text-xs text-white focus:border-amber-500 focus:outline-none"
                       />
                     </div>

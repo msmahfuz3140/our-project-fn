@@ -107,7 +107,7 @@ export function ProfileView() {
 
   // --- Profile Edit State ---
   const [name, setName] = useState('');
-  const [countryDialCode, setCountryDialCode] = useState('+880');
+  const [countryDialCode, setCountryDialCode] = useState('+44');
   const [localPhone, setLocalPhone] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -148,7 +148,7 @@ export function ProfileView() {
 
       // Parse existing phone if any
       if (user.phone) {
-        let matchedDial = '+880';
+        let matchedDial = '+44';
         let remaining = user.phone;
         for (const item of COUNTRY_CODES) {
           if (item.dialCode !== '+' && user.phone.startsWith(item.dialCode)) {
@@ -640,7 +640,7 @@ export function ProfileView() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your full name"
+                  placeholder="John Doe"
                   className="w-full rounded-xl border border-white/10 bg-black/40 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none transition-colors"
                   required
                 />
@@ -715,7 +715,7 @@ export function ProfileView() {
                     type="tel"
                     value={localPhone}
                     onChange={(e) => setLocalPhone(e.target.value)}
-                    placeholder="e.g. 1712345678"
+                    placeholder="e.g. 7911123456"
                     className="w-full rounded-xl border border-white/10 bg-black/40 pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none transition-colors"
                   />
                 </div>

@@ -860,7 +860,7 @@ export default function AdminReferralsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Alex Partner"
+                  placeholder="e.g. John Doe"
                   value={newModName}
                   onChange={(e) => setNewModName(e.target.value)}
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
@@ -874,7 +874,7 @@ export default function AdminReferralsPage() {
                 <input
                   type="email"
                   required
-                  placeholder="alex@partner.com"
+                  placeholder="john.partner@example.com"
                   value={newModEmail}
                   onChange={(e) => setNewModEmail(e.target.value)}
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
@@ -887,7 +887,7 @@ export default function AdminReferralsPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="+8801700000000"
+                  placeholder="+447911123456"
                   value={newModPhone}
                   onChange={(e) => setNewModPhone(e.target.value)}
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
