@@ -14,11 +14,13 @@ import {
   ArrowRight,
   Sparkles,
   Zap,
-  Coins
+  Coins,
+  Send
 } from 'lucide-react';
 import { authClient, PurchaseOrderResult, OrderDetails } from '../lib/auth-client';
 import { SubscriptionPlan, formatCentsToUsd } from '../shared/plans';
 import { useAuth } from '../context/AuthContext';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 import Link from 'next/link';
 
 export interface CryptoOption {
@@ -38,7 +40,7 @@ export const CRYPTO_OPTIONS: CryptoOption[] = [
     network: 'TRON (TRC-20)',
     symbol: '₮',
     iconBg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    badge: 'Fast & Low Fee',
+    badge: 'Popular',
     minNotice: 'Min ~$12'
   },
   {
@@ -47,7 +49,7 @@ export const CRYPTO_OPTIONS: CryptoOption[] = [
     network: 'Tron (TRX)',
     symbol: '◈',
     iconBg: 'bg-red-500/20 text-red-400 border-red-500/30',
-    badge: 'Micro (From $0.20)',
+    badge: 'From $0.20',
     minNotice: 'Min $0.20'
   },
   {
@@ -72,15 +74,8 @@ export const CRYPTO_OPTIONS: CryptoOption[] = [
     network: 'Litecoin (LTC)',
     symbol: 'Ł',
     iconBg: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    badge: 'Low Fee',
     minNotice: 'Min $0.80'
-  },
-  {
-    id: 'USDTERC20',
-    name: 'USDT',
-    network: 'Ethereum (ERC-20)',
-    symbol: '₮',
-    iconBg: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
-    minNotice: 'Min ~$15'
   },
   {
     id: 'SOL',
@@ -91,12 +86,55 @@ export const CRYPTO_OPTIONS: CryptoOption[] = [
     minNotice: 'Min ~$2'
   },
   {
+    id: 'XMR',
+    name: 'Monero',
+    network: 'Monero (XMR)',
+    symbol: 'ɱ',
+    iconBg: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    badge: 'Private',
+    minNotice: 'Min ~$2'
+  },
+  {
+    id: 'TON',
+    name: 'Toncoin',
+    network: 'TON Network',
+    symbol: '💎',
+    iconBg: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+    badge: 'Telegram',
+    minNotice: 'Min ~$2'
+  },
+  {
+    id: 'DOGE',
+    name: 'Dogecoin',
+    network: 'Dogecoin (DOGE)',
+    symbol: 'Ð',
+    iconBg: 'bg-yellow-400/20 text-yellow-300 border-yellow-400/30',
+    minNotice: 'Min ~$3'
+  },
+  {
+    id: 'XRP',
+    name: 'Ripple',
+    network: 'XRP Ledger',
+    symbol: '✕',
+    iconBg: 'bg-zinc-400/20 text-zinc-300 border-zinc-400/30',
+    badge: 'Fast',
+    minNotice: 'Min $0.50'
+  },
+  {
     id: 'BNBBSC',
     name: 'BNB',
     network: 'BNB Chain (BEP-20)',
     symbol: 'BNB',
     iconBg: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     minNotice: 'Min ~$3'
+  },
+  {
+    id: 'USDTERC20',
+    name: 'USDT',
+    network: 'Ethereum (ERC-20)',
+    symbol: '₮',
+    iconBg: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+    minNotice: 'Min ~$15'
   }
 ];
 
@@ -107,6 +145,13 @@ interface CryptoPaymentModalProps {
 
 export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
   const { refreshUser } = useAuth();
+  const { settings } = usePublicSettings();
+  
+  // Resolve Telegram support desk URL dynamically
+  const rawTelegram = settings?.supportContact?.telegram || settings?.socialLinks?.telegram || 'https://t.me/roulettetools_support';
+  const telegramUrl = rawTelegram.startsWith('http')
+    ? rawTelegram
+    : (rawTelegram.startsWith('@') ? `https://t.me/${rawTelegram.slice(1)}` : `https://t.me/${rawTelegram}`);
   
   // Smart initial coin selection: for micro/test plans under $12, use TRX by default
   const defaultCoin = (plan.priceUsd < 12 || plan.priceCents < 1200)
@@ -219,7 +264,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
       )}
 
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl border border-amber-500/30 bg-[#0a0d14] p-4 sm:p-6 md:p-7 shadow-[0_0_60px_rgba(245,158,11,0.2)] text-slate-100 scrollbar-thin scrollbar-thumb-white/10">
+      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl border border-amber-500/30 bg-[#0a0d14] p-3.5 sm:p-6 md:p-7 shadow-[0_0_60px_rgba(245,158,11,0.2)] text-slate-100 scrollbar-thin scrollbar-thumb-white/10">
         
         {/* Glow ambient background */}
         <div className="absolute top-0 right-1/4 w-72 h-36 bg-amber-500/10 rounded-full blur-[100px] pointer-events-none" />
@@ -259,12 +304,12 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
               </label>
               {plan.priceUsd < 12 && (
                 <span className="text-[10px] text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/25">
-                  Micro-plan: TRX recommended
+                  Micro-plan: TRX or XRP recommended
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5 sm:gap-2">
               {CRYPTO_OPTIONS.map((coin) => {
                 const isSelected = selectedCoin.id === coin.id;
                 return (
@@ -275,27 +320,56 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
                       if (loading || isSelected) return;
                       setSelectedCoin(coin);
                     }}
-                    className={`relative flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all ${
+                    className={`relative flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-xl border text-center transition-all ${
                       isSelected
                         ? 'border-amber-400 bg-amber-500/15 shadow-[0_0_15px_rgba(245,158,11,0.25)] text-white'
                         : 'border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/25 hover:text-white'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border ${coin.iconBg}`}>
+                    <div className="flex items-center gap-1 sm:gap-1.5 mb-0.5">
+                      <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-black border shrink-0 ${coin.iconBg}`}>
                         {coin.symbol}
                       </span>
-                      <span className="text-xs font-bold text-white">{coin.name}</span>
+                      <span className="text-[11px] sm:text-xs font-bold text-white truncate max-w-[55px] sm:max-w-none">{coin.name}</span>
                     </div>
-                    <span className="text-[9px] text-slate-400 truncate max-w-[100px]">{coin.network}</span>
-                    {coin.id === 'TRX' && (
-                      <span className="absolute -top-1.5 right-1 px-1.5 py-0.2 bg-emerald-500 text-black text-[8px] font-black uppercase rounded-full">
-                        Min $0.20
+                    <span className="text-[8px] sm:text-[9px] text-slate-400 truncate max-w-[70px] sm:max-w-[95px]">{coin.network}</span>
+                    {coin.badge && (
+                      <span className="absolute -top-1.5 right-1 px-1 py-0.1 bg-amber-500 text-black text-[7px] sm:text-[8px] font-black uppercase rounded-full leading-tight">
+                        {coin.badge}
                       </span>
                     )}
                   </button>
                 );
               })}
+            </div>
+
+            {/* Telegram Support Option for Non-Crypto Users */}
+            <div className="mt-2.5 sm:mt-3 rounded-xl border border-sky-500/30 bg-gradient-to-r from-sky-950/40 via-sky-900/15 to-transparent p-2.5 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-[0_0_20px_rgba(14,165,233,0.08)]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center shrink-0 text-sky-400">
+                  <Send className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <p className="text-[11px] sm:text-xs font-bold text-white flex items-center gap-1.5">
+                    Don&apos;t have cryptocurrency?
+                    <span className="text-[9px] font-semibold text-sky-400 bg-sky-500/15 px-1.5 py-0.2 rounded border border-sky-500/25">
+                      Direct Support
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-slate-300">
+                    Contact Telegram support to activate VIP access via alternative assistance.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-black text-[11px] font-black uppercase tracking-wider shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all shrink-0 cursor-pointer"
+              >
+                <Send className="h-3 w-3" />
+                <span>Chat on Telegram</span>
+              </a>
             </div>
           </div>
         )}
@@ -343,6 +417,15 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
               >
                 Retry
               </button>
+              <a
+                href={telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-500 hover:bg-sky-400 text-black rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                <Send className="h-3 w-3" />
+                Telegram Support
+              </a>
             </div>
           </div>
         )}
@@ -432,7 +515,7 @@ export function CryptoPaymentModal({ plan, onClose }: CryptoPaymentModalProps) {
               
               {/* QR Code Container - Fills the white box completely */}
               <div className="sm:col-span-5 flex flex-col items-center justify-center">
-                <div className="w-40 h-40 sm:w-44 sm:h-44 p-2 bg-white rounded-2xl shadow-[0_0_25px_rgba(255,255,255,0.2)] flex items-center justify-center overflow-hidden">
+                <div className="w-36 h-36 sm:w-44 sm:h-44 p-2 bg-white rounded-2xl shadow-[0_0_25px_rgba(255,255,255,0.2)] flex items-center justify-center overflow-hidden">
                   {qrDataUrl ? (
                     <img
                       src={qrDataUrl}
