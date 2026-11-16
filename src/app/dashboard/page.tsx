@@ -948,7 +948,7 @@ export default function DashboardPage() {
                       Instant Crypto IPN
                     </h4>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Automated server activation via signed NOWPayments IPN after final settlement verification.
+                      Automated server activation via signed cryptographic IPN after final settlement verification.
                     </p>
                   </div>
                   <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">

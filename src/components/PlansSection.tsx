@@ -260,7 +260,7 @@ export function PlansSection() {
           </h2>
 
           <p className="font-body text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl mx-auto">
-            Fixed USD valuation with real-time decimal crypto checkout via NOWPayments. Premium unlocks automatically after the signed IPN reaches final settlement.
+            Fixed USD valuation with real-time decimal crypto checkout. Premium unlocks automatically after the signed IPN reaches final settlement.
           </p>
 
           {/* Duration Category Filter Switcher */}
@@ -526,7 +526,7 @@ export function PlansSection() {
               </div>
               <div>
                 <h4 className="font-display text-xs sm:text-sm font-black text-white uppercase tracking-wider mb-1">
-                  NOWPayments Protocol
+                  Cryptographic Protocol
                 </h4>
                 <p className="font-body text-[11px] sm:text-xs text-slate-400 leading-relaxed">
                   Cryptographically signed IPN webhook verification with exact integer cents precision. Premium unlocks only after final provider settlement.

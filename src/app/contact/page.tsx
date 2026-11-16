@@ -169,7 +169,7 @@ export default function ContactPage() {
                     >
                       <option value="General Platform Inquiry">General Platform Inquiry</option>
                       <option value="Subscription & Plan Access">Subscription & Plan Access</option>
-                      <option value="NOWPayments Crypto Billing Issue">NOWPayments Crypto Billing Issue</option>
+                      <option value="Cryptocurrency Billing Inquiry">Cryptocurrency Billing Inquiry</option>
                       <option value="Moderator Partner Application">Moderator Partner Application</option>
                       <option value="Technical Support & Telemetry">Technical Support & Telemetry</option>
                     </select>

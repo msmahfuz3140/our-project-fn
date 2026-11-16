@@ -29,9 +29,9 @@ export default function HowItWorksPage() {
     {
       num: '02',
       title: 'Choose a Subscription Plan',
-      desc: 'Select a plan from the live database catalogue. Pay securely with crypto through NOWPayments. The backend snapshots the authoritative price and duration before checkout.',
+      desc: 'Select a plan from the live database catalogue. Pay securely with non-custodial cryptocurrency. The backend snapshots the authoritative price and duration before checkout.',
       icon: CreditCard,
-      badge: 'NOWPAYMENTS CRYPTO'
+      badge: 'CRYPTO PASSES'
     },
     {
       num: '03',
@@ -78,7 +78,7 @@ export default function HowItWorksPage() {
             </h1>
 
             <p className="mx-auto max-w-3xl text-base sm:text-lg text-slate-400 leading-relaxed">
-              From cryptographic account verification and seamless NOWPayments checkout to live European Roulette telemetry tracking.
+              From cryptographic account verification and seamless decentralized crypto checkout to live European Roulette telemetry tracking.
             </p>
           </div>
         </section>
