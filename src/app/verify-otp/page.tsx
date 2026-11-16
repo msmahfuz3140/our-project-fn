@@ -1,22 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { OtpPurpose } from '../../shared/auth';
+import { Turnstile, TurnstileRef } from '../../components/Turnstile';
 import { KeyRound, ShieldCheck, Activity, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { verifyOtp, resendOtp } = useAuth();
+  const turnstileRef = useRef<TurnstileRef>(null);
 
   const targetParam = searchParams.get('target') || '';
   const purposeParam = (searchParams.get('purpose') as OtpPurpose) || OtpPurpose.REGISTRATION;
 
   const [target, setTarget] = useState(targetParam);
   const [code, setCode] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [cooldown, setCooldown] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,13 +70,19 @@ function VerifyOtpContent() {
       return;
     }
 
+    if (!turnstileToken) {
+      setError('Please complete the security CAPTCHA verification');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await verifyOtp({
         target: target.trim(),
         code: cleanCode,
-        purpose: purposeParam
+        purpose: purposeParam,
+        turnstileToken
       });
 
       setInfoMessage('Verification successful! Redirecting...');
@@ -82,6 +91,8 @@ function VerifyOtpContent() {
       }, 1200);
     } catch (err: any) {
       setError(err?.message || 'Verification failed. Please check the code and try again.');
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -203,9 +214,18 @@ function VerifyOtpContent() {
             </p>
           </div>
 
+          {/* Cloudflare Turnstile CAPTCHA */}
+          <Turnstile
+            action="verify_otp"
+            onSuccess={setTurnstileToken}
+            onExpire={() => setTurnstileToken('')}
+            onError={() => setTurnstileToken('')}
+            ref={turnstileRef}
+          />
+
           <button
             type="submit"
-            disabled={loading || code.length !== 6}
+            disabled={loading || code.length !== 6 || !turnstileToken}
             className="w-full flex items-center justify-center gap-2 rounded-lg border border-amber-500/50 bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
           >
             {loading ? (

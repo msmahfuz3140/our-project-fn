@@ -121,8 +121,12 @@ const NAV_SECTIONS: NavSection[] = [
         icon: Share2,
         subItems: [
           { name: 'Affiliate Overview', href: '/heda/referrals?tab=overview' },
+          { name: 'All Referral Relationships', href: '/heda/referrals?tab=relationships' },
           { name: 'Active Moderators', href: '/heda/referrals?tab=moderators' },
           { name: 'Commission Ledger', href: '/heda/referrals?tab=commissions' },
+          { name: 'Withdrawal Requests', href: '/heda/withdrawals', badge: 'PAYOUT' },
+          { name: 'Wallet Management', href: '/heda/wallet', badge: 'WALLET' },
+          { name: 'Referral Settings', href: '/heda/referrals?tab=overview' },
           { name: 'Fraud Telemetry', href: '/heda/referrals?tab=fraud' }
         ]
       }

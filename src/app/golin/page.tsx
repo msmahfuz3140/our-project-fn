@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { Turnstile, TurnstileRef } from '../../components/Turnstile';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const turnstileRef = useRef<TurnstileRef>(null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,24 +22,28 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
     const identifier = email.trim();
 
     if (!identifier) {
       setError('Please enter your email address');
-      setLoading(false);
       return;
     }
 
     if (!password) {
       setError('Please enter your password');
-      setLoading(false);
       return;
     }
 
+    if (!turnstileToken) {
+      setError('Please complete the security CAPTCHA verification');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const response = await login({ identifier, password });
+      const response = await login({ identifier, password, turnstileToken });
 
       if (response?.user?.mustChangePassword) {
         router.push('/change-password');
@@ -52,6 +59,8 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       setError(err?.message || 'Invalid email or password. Please verify and try again.');
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -149,9 +158,18 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* Cloudflare Turnstile CAPTCHA */}
+          <Turnstile
+            action="login"
+            onSuccess={setTurnstileToken}
+            onExpire={() => setTurnstileToken('')}
+            onError={() => setTurnstileToken('')}
+            ref={turnstileRef}
+          />
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !turnstileToken}
             className="w-full mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/50 bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
           >
             {loading ? (

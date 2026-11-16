@@ -557,7 +557,7 @@ export function PlansSection() {
                   Zero-Custody Architecture
                 </h4>
                 <p className="font-body text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                  Pure statistical intelligence SaaS. No user deposit balances held and strict zero withdrawal platform policy.
+                  Pure statistical intelligence SaaS. No betting deposits or player balance custody. Referral earnings may be withdrawn through the approved payout workflow.
                 </p>
               </div>
             </div>

@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authClient } from '../../lib/auth-client';
+import { Turnstile, TurnstileRef } from '../../components/Turnstile';
 import { Mail, Lock, Eye, EyeOff, KeyRound, ArrowRight, ShieldCheck, Activity, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const turnstileRef1 = useRef<TurnstileRef>(null);
+  const turnstileRef2 = useRef<TurnstileRef>(null);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [target, setTarget] = useState('');
@@ -15,6 +18,8 @@ export default function ForgotPasswordPage() {
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken1, setTurnstileToken1] = useState('');
+  const [turnstileToken2, setTurnstileToken2] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -32,14 +37,24 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    if (!turnstileToken1) {
+      setError('Please complete the security CAPTCHA verification');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await authClient.forgotPassword({ target: cleanTarget });
+      const res = await authClient.forgotPassword({
+        target: cleanTarget,
+        turnstileToken: turnstileToken1
+      });
       setSuccessMsg(res.message);
       setStep(2);
     } catch (err: any) {
       setError(err?.message || 'Could not process request. Please try again.');
+      turnstileRef1.current?.reset();
+      setTurnstileToken1('');
     } finally {
       setLoading(false);
     }
@@ -66,13 +81,19 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    if (!turnstileToken2) {
+      setError('Please complete the security CAPTCHA verification');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await authClient.resetPassword({
         target: target.trim(),
         code: code.trim(),
-        newPassword
+        newPassword,
+        turnstileToken: turnstileToken2
       });
 
       setSuccessMsg(res.message || 'Password reset successfully! Redirecting to login...');
@@ -81,6 +102,8 @@ export default function ForgotPasswordPage() {
       }, 1500);
     } catch (err: any) {
       setError(err?.message || 'Password reset failed. Please verify your code and try again.');
+      turnstileRef2.current?.reset();
+      setTurnstileToken2('');
     } finally {
       setLoading(false);
     }
@@ -159,9 +182,18 @@ export default function ForgotPasswordPage() {
               </p>
             </div>
 
+            {/* Cloudflare Turnstile CAPTCHA */}
+            <Turnstile
+              action="forgot_password"
+              onSuccess={setTurnstileToken1}
+              onExpire={() => setTurnstileToken1('')}
+              onError={() => setTurnstileToken1('')}
+              ref={turnstileRef1}
+            />
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !turnstileToken1}
               className="w-full mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/50 bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
             >
               {loading ? (
@@ -234,9 +266,18 @@ export default function ForgotPasswordPage() {
               </div>
             </div>
 
+            {/* Cloudflare Turnstile CAPTCHA */}
+            <Turnstile
+              action="reset_password"
+              onSuccess={setTurnstileToken2}
+              onExpire={() => setTurnstileToken2('')}
+              onError={() => setTurnstileToken2('')}
+              ref={turnstileRef2}
+            />
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !turnstileToken2}
               className="w-full mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/50 bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
             >
               {loading ? (

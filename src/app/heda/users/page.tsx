@@ -116,6 +116,9 @@ export default function AdminUsersPage() {
   const [editPhone, setEditPhone] = useState('');
   const [editRole, setEditRole] = useState('USER');
   const [editCommissionRate, setEditCommissionRate] = useState(10);
+  const [editReferralRate, setEditReferralRate] = useState('');
+  const [editReferralType, setEditReferralType] = useState<'DEFAULT' | 'ONE_TIME' | 'LIFETIME'>('DEFAULT');
+  const [editReferralEligible, setEditReferralEligible] = useState(true);
   const [editIsEmailVerified, setEditIsEmailVerified] = useState(false);
   const [editIsPhoneVerified, setEditIsPhoneVerified] = useState(false);
   const [editIsActive, setEditIsActive] = useState(true);
@@ -238,7 +241,21 @@ export default function AdminUsersPage() {
     setEditMustChangePassword(false);
     setPasswordSaveStatus(null);
     setShowPassword(false);
-    setEditCommissionRate(u.moderatorCommissionRate ?? 10);
+    const storedModeratorRate = u.moderatorCommissionRate;
+    setEditCommissionRate(
+      storedModeratorRate !== undefined
+        ? storedModeratorRate <= 1
+          ? Math.round(storedModeratorRate * 10000) / 100
+          : storedModeratorRate
+        : 50
+    );
+    setEditReferralRate(
+      (u as any).referralCommissionRate !== undefined
+        ? String((u as any).referralCommissionRate)
+        : ''
+    );
+    setEditReferralType(((u as any).referralCommissionType as any) || 'DEFAULT');
+    setEditReferralEligible((u as any).referralEligible !== false);
     setEditIsEmailVerified(!!u.isEmailVerified);
     setEditIsPhoneVerified(!!u.isPhoneVerified);
     setEditIsActive(u.isActive !== false);
@@ -389,6 +406,9 @@ export default function AdminUsersPage() {
         mustChangePassword: editPassword ? editMustChangePassword : undefined,
         role: editRole,
         moderatorCommissionRate: editRole === 'MODERATOR' ? Number(editCommissionRate) : undefined,
+        referralCommissionRate: editReferralRate.trim() === '' ? undefined : Number(editReferralRate),
+        referralCommissionType: editReferralType === 'DEFAULT' ? undefined : editReferralType,
+        referralEligible: editReferralEligible,
         isEmailVerified: editIsEmailVerified,
         isPhoneVerified: editIsPhoneVerified,
         isActive: editIsActive,
@@ -1577,6 +1597,100 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
+                {/* Referral & Wallet Management */}
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="font-display text-xs font-bold uppercase tracking-wider text-emerald-300">
+                        Referral & Wallet Management
+                      </h4>
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Role: <span className="font-bold text-white">{detailedUser.user?.role}</span> · Referral code:{' '}
+                        <span className="font-mono text-amber-300">{detailedUser.user?.referralCode || '—'}</span>
+                      </p>
+                    </div>
+                    <a
+                      href={`/heda/wallet?search=${encodeURIComponent(detailedUser.user?.email || '')}`}
+                      className="inline-flex items-center gap-1.5 self-start rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500/20"
+                    >
+                      Open Wallet Management
+                    </a>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[
+                      {
+                        label: 'Available',
+                        value: `$${(((detailedUser.wallet?.availableBalanceCents || 0) / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                        color: 'text-emerald-300'
+                      },
+                      {
+                        label: 'Pending Withdrawal',
+                        value: `$${(((detailedUser.wallet?.reservedWithdrawalCents || 0) / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                        color: 'text-amber-300'
+                      },
+                      {
+                        label: 'Commission Earned',
+                        value: `$${(((detailedUser.wallet?.lifetimeCommissionCents || 0) / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                        color: 'text-sky-300'
+                      },
+                      {
+                        label: 'Total Withdrawn',
+                        value: `$${(((detailedUser.wallet?.totalWithdrawnCents || 0) / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                        color: 'text-purple-300'
+                      }
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-lg border border-white/5 bg-black/25 p-2.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{item.label}</p>
+                        <p className={`mt-1 font-mono text-xs font-bold ${item.color}`}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="rounded-lg border border-white/5 bg-black/20 p-2.5">
+                      <p className="text-[9px] uppercase tracking-wider text-slate-500">Referred Users</p>
+                      <p className="mt-1 text-sm font-bold text-white">{detailedUser.referredUsersCount || 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/5 bg-black/20 p-2.5">
+                      <p className="text-[9px] uppercase tracking-wider text-slate-500">Successful Referrals</p>
+                      <p className="mt-1 text-sm font-bold text-white">{detailedUser.referralCommissions?.length || 0}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/5 bg-black/20 p-2.5">
+                      <p className="text-[9px] uppercase tracking-wider text-slate-500">Commission Rate</p>
+                      <p className="mt-1 text-sm font-bold text-amber-300">
+                        {detailedUser.user?.referralCommissionRate !== undefined
+                          ? `${Math.round(detailedUser.user.referralCommissionRate * 100)}%`
+                          : detailedUser.user?.role === 'MODERATOR'
+                          ? '50% default'
+                          : '30% default'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/5 bg-black/20 p-2.5">
+                      <p className="text-[9px] uppercase tracking-wider text-slate-500">Earning Type</p>
+                      <p className="mt-1 text-sm font-bold text-emerald-300">
+                        {detailedUser.user?.referralCommissionType ||
+                          (detailedUser.user?.role === 'MODERATOR' ? 'Lifetime' : 'One-Time')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-bold uppercase tracking-wider ${
+                        detailedUser.user?.referralEligible !== false
+                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                          : 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                      }`}
+                    >
+                      Referral {detailedUser.user?.referralEligible !== false ? 'Enabled' : 'Disabled'}
+                    </span>
+                    <span className="text-slate-500">
+                      Pending withdrawal requests: {(detailedUser.withdrawals || []).filter((w: any) => ['PENDING', 'APPROVED'].includes(w.status)).length}
+                    </span>
+                  </div>
+                </div>
+
                 {/* Subscriptions History */}
                 <div>
                   <h4 className="font-display text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
@@ -1890,6 +2004,58 @@ export default function AdminUsersPage() {
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Individual Referral & Wallet Configuration */}
+            <div className="p-3.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold uppercase tracking-wider text-emerald-300">
+                  Referral & Wallet Configuration
+                </label>
+                <label className="flex items-center gap-2 text-[10px] text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={editReferralEligible}
+                    onChange={(e) => setEditReferralEligible(e.target.checked)}
+                    className="h-4 w-4 accent-emerald-500"
+                  />
+                  Referral Eligible
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                    Custom Commission Rate (0–1)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={editReferralRate}
+                    onChange={(e) => setEditReferralRate(e.target.value)}
+                    placeholder={editRole === 'MODERATOR' ? 'Default 0.50' : 'Default 0.30'}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                  <p className="mt-1 text-[10px] text-slate-500">Blank uses the role/platform default for future sales.</p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                    Commission Earning Type
+                  </label>
+                  <select
+                    value={editReferralType}
+                    onChange={(e) => setEditReferralType(e.target.value as any)}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    <option value="DEFAULT">Role default ({editRole === 'MODERATOR' ? 'Lifetime' : 'One-Time'})</option>
+                    <option value="ONE_TIME">One-Time</option>
+                    <option value="LIFETIME">Lifetime</option>
+                  </select>
+                  <p className="mt-1 text-[10px] text-slate-500">Changes apply to future commissions only.</p>
+                </div>
+              </div>
             </div>
 
             {/* Account Status Flags */}

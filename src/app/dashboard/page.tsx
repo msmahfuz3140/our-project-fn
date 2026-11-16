@@ -38,7 +38,8 @@ import {
   Target,
   Zap,
   Check,
-  RefreshCw
+  RefreshCw,
+  Wallet
 } from 'lucide-react';
 import { PremiumLockModal } from '../../components/PremiumLockModal';
 import { useDisclaimer } from '../../context/DisclaimerContext';
@@ -46,11 +47,13 @@ import { NotificationBell } from '../../components/NotificationBell';
 import { ProfileView } from '../../components/ProfileView';
 import { PaymentHistory } from '../../components/PaymentHistory';
 import { SubscriptionCountdown } from '../../components/SubscriptionCountdown';
+import { WalletView } from '../../components/WalletView';
 
 type DashboardTab =
   | 'overview'
   | 'profile'
   | 'subscription'
+  | 'wallet'
   | 'payments'
   | 'tool'
   | 'referral'
@@ -180,6 +183,8 @@ export default function DashboardPage() {
         setActiveTab('profile');
       } else if (urlTab === 'subscription') {
         setActiveTab('subscription');
+      } else if (urlTab === 'wallet') {
+        setActiveTab('wallet');
       } else if (urlTab === 'payments') {
         setActiveTab('payments');
       } else if (urlTab === 'security') {
@@ -475,6 +480,26 @@ export default function DashboardPage() {
                   {user.hasActiveSubscription && (
                     <span className="h-2 w-2 rounded-full bg-emerald-400" />
                   )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('wallet');
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-xs font-semibold transition-all ${
+                    activeTab === 'wallet'
+                      ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)] font-bold'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Wallet className="h-4 w-4" />
+                    <span>My Wallet</span>
+                  </div>
+                  <span className="font-mono text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/30">
+                    Earnings
+                  </span>
                 </button>
 
                 <button
@@ -996,6 +1021,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: MY WALLET */}
+          {activeTab === 'wallet' && (
+            <div className="animate-in fade-in duration-200">
+              <WalletView />
             </div>
           )}
 

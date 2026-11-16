@@ -13,7 +13,8 @@ import {
   ShieldAlert,
   Info,
   ExternalLink,
-  CheckCircle2
+  CheckCircle2,
+  Wallet
 } from 'lucide-react';
 import { authClient } from '../lib/auth-client';
 
@@ -112,6 +113,10 @@ export function NotificationBell() {
         return <ShieldAlert className="h-4 w-4 text-cyan-400" />;
       case 'PLATFORM_ANNOUNCEMENT':
         return <Info className="h-4 w-4 text-blue-400" />;
+      case 'WALLET_UPDATE':
+        return <Wallet className="h-4 w-4 text-emerald-400" />;
+      case 'WITHDRAWAL_UPDATE':
+        return <CreditCard className="h-4 w-4 text-amber-400" />;
       default:
         return <Bell className="h-4 w-4 text-slate-400" />;
     }

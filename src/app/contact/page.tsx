@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { authClient } from '../../lib/auth-client';
+import { Turnstile, TurnstileRef } from '../../components/Turnstile';
 import {
   Mail,
   User,
@@ -18,10 +19,13 @@ import {
 } from 'lucide-react';
 
 export default function ContactPage() {
+  const turnstileRef = useRef<TurnstileRef>(null);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('General Platform Inquiry');
   const [message, setMessage] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,6 +53,12 @@ export default function ContactPage() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    if (!turnstileToken) {
+      setError('Please complete the security CAPTCHA verification');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -56,15 +66,20 @@ export default function ContactPage() {
         name: name.trim(),
         email: email.trim(),
         subject: subject.trim(),
-        message: message.trim()
+        message: message.trim(),
+        turnstileToken
       });
 
       setSuccess(res.message || 'Your inquiry has been received. Our team will reply within 24 hours.');
       setName('');
       setEmail('');
       setMessage('');
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
     } catch (err: any) {
       setError(err?.message || 'Could not send your message. Please verify the information and try again.');
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -189,9 +204,20 @@ export default function ContactPage() {
                     />
                   </div>
 
+                  {/* Cloudflare Turnstile CAPTCHA */}
+                  <div className="flex justify-start">
+                    <Turnstile
+                      action="contact"
+                      onSuccess={setTurnstileToken}
+                      onExpire={() => setTurnstileToken('')}
+                      onError={() => setTurnstileToken('')}
+                      ref={turnstileRef}
+                    />
+                  </div>
+
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !turnstileToken}
                     className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/50 bg-gradient-to-r from-amber-500 to-amber-600 px-8 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(245,158,11,0.25)] hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all"
                   >
                     {loading ? (

@@ -6,14 +6,16 @@ export const RegisterSchema = z.object({
   email: z.string().email('Invalid email address format'),
   phone: z.string().optional(),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
-  referralCode: z.string().optional()
+  referralCode: z.string().optional(),
+  turnstileToken: z.string().optional()
 });
 
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 
 export const LoginSchema = z.object({
   identifier: z.string().min(3, 'Email or phone number is required'),
-  password: z.string().min(6, 'Password is required')
+  password: z.string().min(6, 'Password is required'),
+  turnstileToken: z.string().optional()
 });
 
 export type LoginInput = z.infer<typeof LoginSchema>;
@@ -27,20 +29,23 @@ export enum OtpPurpose {
 export const VerifyOtpSchema = z.object({
   target: z.string().min(3, 'Target email or phone is required'),
   code: z.string().length(6, 'Verification code must be exactly 6 digits'),
-  purpose: z.nativeEnum(OtpPurpose)
+  purpose: z.nativeEnum(OtpPurpose),
+  turnstileToken: z.string().optional()
 });
 
 export type VerifyOtpInput = z.infer<typeof VerifyOtpSchema>;
 
 export const ResendOtpSchema = z.object({
   target: z.string().min(3, 'Target email or phone is required'),
-  purpose: z.nativeEnum(OtpPurpose)
+  purpose: z.nativeEnum(OtpPurpose),
+  turnstileToken: z.string().optional()
 });
 
 export type ResendOtpInput = z.infer<typeof ResendOtpSchema>;
 
 export const ForgotPasswordSchema = z.object({
-  target: z.string().min(3, 'Email or phone number is required')
+  target: z.string().min(3, 'Email or phone number is required'),
+  turnstileToken: z.string().optional()
 });
 
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
@@ -48,7 +53,8 @@ export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 export const ResetPasswordSchema = z.object({
   target: z.string().min(3, 'Target email or phone is required'),
   code: z.string().length(6, 'Verification code must be 6 digits'),
-  newPassword: z.string().min(8, 'New password must be at least 8 characters long')
+  newPassword: z.string().min(8, 'New password must be at least 8 characters long'),
+  turnstileToken: z.string().optional()
 });
 
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;

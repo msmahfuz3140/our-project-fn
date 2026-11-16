@@ -511,7 +511,7 @@ export const authClient = {
   },
 
   // Contact Inquiries
-  async submitContact(input: { name: string; email: string; subject: string; message: string }): Promise<{ message: string }> {
+  async submitContact(input: { name: string; email: string; subject: string; message: string; turnstileToken?: string }): Promise<{ message: string }> {
     return request<{ message: string }>('/contact', {
       method: 'POST',
       body: JSON.stringify(input)
@@ -847,6 +847,11 @@ export const authClient = {
     return request<any>(`/admin/referrals/commissions${qs}`);
   },
 
+  async getAdminReferralRelationships(params?: Record<string, any>): Promise<any> {
+    const qs = buildQueryString(params);
+    return request<any>(`/admin/referrals/relationships${qs}`, { bypassCache: true });
+  },
+
   async updateAdminCommissionStatus(commissionId: string, data: { status: string; reason: string }): Promise<any> {
     return request<any>(`/admin/referrals/commissions/${commissionId}/status`, {
       method: 'POST',
@@ -858,7 +863,12 @@ export const authClient = {
     return request<any>('/admin/referrals/policy');
   },
 
-  async updateAdminCommissionPolicy(data: { defaultRate: number; reason: string }): Promise<any> {
+  async updateAdminCommissionPolicy(data: {
+    defaultRate: number;
+    normalUserRate?: number;
+    referralEnabled?: boolean;
+    reason: string;
+  }): Promise<any> {
     return request<any>('/admin/referrals/policy', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -867,6 +877,87 @@ export const authClient = {
 
   async getAdminReferralFraudAlerts(): Promise<any[]> {
     return request<any[]>('/admin/referrals/fraud-alerts');
+  },
+
+  // --- Wallet & Withdrawals ---
+  async getMyWallet(params?: Record<string, any>): Promise<any> {
+    const qs = buildQueryString(params);
+    return request<any>(`/wallet/me${qs}`, { bypassCache: true, ttlMs: 0 });
+  },
+
+  async getMyWalletTransactions(params?: Record<string, any>): Promise<any> {
+    const qs = buildQueryString(params);
+    return request<any>(`/wallet/transactions${qs}`, { bypassCache: true, ttlMs: 0 });
+  },
+
+  async getMyWithdrawals(params?: Record<string, any>): Promise<any> {
+    const qs = buildQueryString(params);
+    return request<any>(`/wallet/withdrawals${qs}`, { bypassCache: true, ttlMs: 0 });
+  },
+
+  async requestWithdrawal(data: {
+    amountUsd: number;
+    walletAddress: string;
+    network: string;
+    idempotencyKey?: string;
+  }): Promise<any> {
+    return request<any>('/wallet/withdrawals', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getAdminReferralWallets(params?: Record<string, any>): Promise<any> {
+    const qs = buildQueryString(params);
+    return request<any>(`/admin/referrals/wallets${qs}`, { bypassCache: true });
+  },
+
+  async getAdminWalletStats(): Promise<any> {
+    return request<any>('/admin/referrals/wallet-stats', { bypassCache: true });
+  },
+
+  async adjustAdminWallet(data: {
+    userId: string;
+    direction: 'ADD' | 'DEDUCT';
+    amountUsd: number;
+    reason: string;
+    idempotencyKey?: string;
+  }): Promise<any> {
+    return request<any>('/admin/referrals/wallets/adjust', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async getAdminWalletTransactions(params?: Record<string, any>): Promise<any> {
+    const qs = buildQueryString(params);
+    return request<any>(`/admin/referrals/transactions${qs}`, { bypassCache: true });
+  },
+
+  async getAdminWithdrawals(params?: Record<string, any>): Promise<any> {
+    const qs = buildQueryString(params);
+    return request<any>(`/admin/referrals/withdrawals${qs}`, { bypassCache: true });
+  },
+
+  async approveAdminWithdrawal(id: string, note?: string): Promise<any> {
+    return request<any>(`/admin/referrals/withdrawals/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ note })
+    });
+  },
+
+  async rejectAdminWithdrawal(id: string, reason: string): Promise<any> {
+    return request<any>(`/admin/referrals/withdrawals/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
+  async markAdminWithdrawalPaid(id: string, transactionHash?: string): Promise<any> {
+    return request<any>(`/admin/referrals/withdrawals/${id}/paid`, {
+      method: 'POST',
+      body: JSON.stringify({ transactionHash })
+    });
   },
 
   // --- Moderator Self Dashboard ---

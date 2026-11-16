@@ -1,21 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { authClient } from '../../lib/auth-client';
+import { Turnstile, TurnstileRef } from '../../components/Turnstile';
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight, ShieldCheck, AlertCircle, Gift, Sparkles } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
+  const turnstileRef = useRef<TurnstileRef>(null);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [referralCode, setReferralCode] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,6 +66,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!turnstileToken) {
+      setError('Please complete the security CAPTCHA verification');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -70,13 +78,16 @@ export default function RegisterPage() {
         name: name.trim() || 'Member',
         email: email.trim().toLowerCase(),
         password,
-        referralCode: referralCode.trim() || undefined
+        referralCode: referralCode.trim() || undefined,
+        turnstileToken
       });
 
       // Immediate redirect to dashboard/tool - no OTP or verification step needed!
       router.push('/dashboard/tool');
     } catch (err: any) {
       setError(err?.message || 'Registration failed. Please check your information and try again.');
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
     } finally {
       setLoading(false);
     }
@@ -202,7 +213,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block font-display text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-              Referral Code <span className="text-[10px] text-slate-500 font-normal">(Optional Moderator Code)</span>
+              Referral Code <span className="text-[10px] text-slate-500 font-normal">(Optional)</span>
             </label>
             <div className="relative">
               <Gift className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -210,15 +221,24 @@ export default function RegisterPage() {
                 type="text"
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                placeholder="MODERATOR_CODE"
+                placeholder="REFERRAL CODE"
                 className="w-full rounded-lg border border-white/10 bg-black/40 pl-10 pr-4 py-2.5 text-sm uppercase text-white placeholder-slate-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
               />
             </div>
           </div>
 
+          {/* Cloudflare Turnstile CAPTCHA */}
+          <Turnstile
+            action="register"
+            onSuccess={setTurnstileToken}
+            onExpire={() => setTurnstileToken('')}
+            onError={() => setTurnstileToken('')}
+            ref={turnstileRef}
+          />
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !turnstileToken}
             className="w-full mt-2 flex items-center justify-center gap-2 rounded-lg border border-amber-500/50 bg-gradient-to-r from-amber-500 to-amber-600 py-3 font-display text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
           >
             {loading ? (

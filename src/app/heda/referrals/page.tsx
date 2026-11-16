@@ -30,7 +30,7 @@ import {
 
 export default function AdminReferralsPage() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'overview' | 'moderators' | 'commissions' | 'fraud'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'relationships' | 'moderators' | 'commissions' | 'fraud'>('overview');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +38,14 @@ export default function AdminReferralsPage() {
 
   // Sync with URL query parameters for nested sidebar items
   useEffect(() => {
-    const tabParam = searchParams.get('tab') as 'overview' | 'moderators' | 'commissions' | 'fraud' | null;
-    if (tabParam && ['overview', 'moderators', 'commissions', 'fraud'].includes(tabParam)) {
+    const tabParam = searchParams.get('tab') as
+      | 'overview'
+      | 'relationships'
+      | 'moderators'
+      | 'commissions'
+      | 'fraud'
+      | null;
+    if (tabParam && ['overview', 'relationships', 'moderators', 'commissions', 'fraud'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -49,12 +55,18 @@ export default function AdminReferralsPage() {
   const [moderators, setModerators] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
   const [fraudAlerts, setFraudAlerts] = useState<any[]>([]);
+  const [relationships, setRelationships] = useState<any[]>([]);
+  const [relSearch, setRelSearch] = useState('');
+  const [relRole, setRelRole] = useState('ALL');
 
   // Search & Filter
   const [modSearch, setModSearch] = useState('');
   const [modStatusFilter, setModStatusFilter] = useState('ALL');
   const [commSearch, setCommSearch] = useState('');
   const [commStatusFilter, setCommStatusFilter] = useState('ALL');
+  const [commTypeFilter, setCommTypeFilter] = useState('ALL');
+  const [commStartDate, setCommStartDate] = useState('');
+  const [commEndDate, setCommEndDate] = useState('');
 
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -84,6 +96,8 @@ export default function AdminReferralsPage() {
   const [editRate, setEditRate] = useState('0.50');
   const [newCommStatus, setNewCommStatus] = useState<'APPROVED' | 'REVERSED'>('APPROVED');
   const [newDefaultRate, setNewDefaultRate] = useState('0.50');
+  const [newNormalRate, setNewNormalRate] = useState('0.30');
+  const [referralEnabled, setReferralEnabled] = useState(true);
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -103,10 +117,20 @@ export default function AdminReferralsPage() {
           limit: 50
         });
         setModerators(mods.moderators || []);
+      } else if (activeTab === 'relationships') {
+        const rels = await authClient.getAdminReferralRelationships({
+          search: relSearch,
+          referrerRole: relRole,
+          limit: 100
+        });
+        setRelationships(rels?.relationships || []);
       } else if (activeTab === 'commissions') {
         const comms = await authClient.getAdminCommissions({
           search: commSearch,
           status: commStatusFilter,
+          commissionType: commTypeFilter,
+          startDate: commStartDate || undefined,
+          endDate: commEndDate || undefined,
           limit: 50
         });
         setCommissions(comms.commissions || []);
@@ -123,7 +147,7 @@ export default function AdminReferralsPage() {
 
   useEffect(() => {
     loadData();
-  }, [activeTab, modStatusFilter, commStatusFilter]);
+  }, [activeTab, modStatusFilter, commStatusFilter, commTypeFilter, commStartDate, commEndDate, relRole]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -249,9 +273,13 @@ export default function AdminReferralsPage() {
     try {
       await authClient.updateAdminCommissionPolicy({
         defaultRate: parseFloat(newDefaultRate),
+        normalUserRate: parseFloat(newNormalRate),
+        referralEnabled,
         reason: auditReason
       });
-      setSuccessMsg(`Global default commission rate updated to ${(parseFloat(newDefaultRate) * 100).toFixed(0)}%`);
+      setSuccessMsg(
+        `Commission policy updated: normal users ${(parseFloat(newNormalRate) * 100).toFixed(0)}% one-time, moderators ${(parseFloat(newDefaultRate) * 100).toFixed(0)}% lifetime.`
+      );
       setPolicyModalOpen(false);
       setAuditReason('');
       loadData();
@@ -352,6 +380,17 @@ export default function AdminReferralsPage() {
           Overview & Policy
         </button>
         <button
+          onClick={() => setActiveTab('relationships')}
+          className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 font-display text-xs font-bold uppercase tracking-wider transition-all ${
+            activeTab === 'relationships'
+              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Share2 className="h-3.5 w-3.5" />
+          All Referrals
+        </button>
+        <button
           onClick={() => setActiveTab('moderators')}
           className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 font-display text-xs font-bold uppercase tracking-wider transition-all ${
             activeTab === 'moderators'
@@ -446,16 +485,25 @@ export default function AdminReferralsPage() {
                   </h3>
                 </div>
                 <p className="mt-2 text-xs text-slate-300 max-w-2xl leading-relaxed">
-                  Default Platform Commission Rate:{' '}
+                  Normal users: <span className="font-bold text-emerald-400">
+                    {((overview?.globalCommissionPolicy?.normalUserRate || 0.30) * 100).toFixed(0)}% one-time
+                  </span>{' '}
+                  per referred customer. Moderators:{' '}
                   <span className="font-bold text-amber-400">
-                    {((overview?.globalCommissionPolicy?.defaultRate || 0.5) * 100).toFixed(0)}%
+                    {((overview?.globalCommissionPolicy?.defaultRate || 0.5) * 100).toFixed(0)}% lifetime
+                  </span>{' '}
+                  on every eligible verified purchase. Referral program:{' '}
+                  <span className={overview?.globalCommissionPolicy?.referralEnabled === false ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                    {overview?.globalCommissionPolicy?.referralEnabled === false ? 'DISABLED' : 'ENABLED'}
                   </span>
-                  . Basis is strictly defined as gross confirmed on-chain subscription revenue in USD. Zero commissions apply to unconfirmed, failed, or refunded transactions. Snapshot immutability guarantees historical records remain untouched when policies are adjusted.
+                  . Basis is strictly gross confirmed on-chain subscription revenue; unconfirmed, failed, or refunded transactions generate no commission.
                 </p>
               </div>
               <button
                 onClick={() => {
                   setNewDefaultRate(String(overview?.globalCommissionPolicy?.defaultRate || 0.5));
+                  setNewNormalRate(String(overview?.globalCommissionPolicy?.normalUserRate || 0.3));
+                  setReferralEnabled(overview?.globalCommissionPolicy?.referralEnabled !== false);
                   setPolicyModalOpen(true);
                 }}
                 className="shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-amber-400 hover:bg-amber-500/20 transition-all"
@@ -675,6 +723,99 @@ export default function AdminReferralsPage() {
         </div>
       )}
 
+      {/* TAB 2: ALL REFERRAL RELATIONSHIPS */}
+      {activeTab === 'relationships' && (
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 rounded-2xl border border-white/5 bg-[#0b0f19] p-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+              <input
+                value={relSearch}
+                onChange={(e) => setRelSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && loadData()}
+                placeholder="Search referrer or referred user name, email, code..."
+                className="w-full rounded-xl border border-white/10 bg-black/30 py-2 pl-9 pr-4 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+            <select
+              value={relRole}
+              onChange={(e) => setRelRole(e.target.value)}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-slate-300 focus:border-amber-500 focus:outline-none"
+            >
+              <option value="ALL">All Referrer Roles</option>
+              <option value="USER">Normal Users</option>
+              <option value="MODERATOR">Moderators</option>
+            </select>
+            <button
+              onClick={loadData}
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-amber-300"
+            >
+              Search
+            </button>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-white/5 bg-[#0b0f19]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-3">Referrer</th>
+                    <th className="px-3 py-3">Referred User</th>
+                    <th className="px-3 py-3">Referral Code</th>
+                    <th className="px-3 py-3">Registered</th>
+                    <th className="px-3 py-3">Purchases</th>
+                    <th className="px-3 py-3">Commission</th>
+                    <th className="px-4 py-3 text-right">Relationship</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {relationships.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                        No referral relationships match the current filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    relationships.map((relationship) => (
+                      <tr key={relationship._id} className="hover:bg-white/[0.03]">
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-white">{relationship.referredBy?.name || '—'}</div>
+                          <div className="text-[10px] text-slate-400">{relationship.referredBy?.email || '—'}</div>
+                          <span
+                            className={`mt-1 inline-flex rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase ${
+                              relationship.referredBy?.role === 'MODERATOR'
+                                ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                            }`}
+                          >
+                            {relationship.referredBy?.role || 'USER'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="text-slate-200">{relationship.name}</div>
+                          <div className="text-[10px] text-slate-500">{relationship.email}</div>
+                        </td>
+                        <td className="px-3 py-3 font-mono text-[10px] text-amber-300">
+                          {relationship.referralCodeUsed || relationship.referredBy?.referralCode || '—'}
+                        </td>
+                        <td className="px-3 py-3 text-[10px] text-slate-400">
+                          {relationship.referredAt ? new Date(relationship.referredAt).toLocaleString() : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-slate-300">{relationship.successfulPurchases || 0}</td>
+                        <td className="px-3 py-3 font-mono font-bold text-emerald-300">
+                          ${Number(relationship.commissionEarnedUsd || 0).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-[10px] text-slate-500">Permanent</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 3: COMMISSIONS LEDGER */}
       {activeTab === 'commissions' && (
         <div className="space-y-4">
@@ -691,6 +832,15 @@ export default function AdminReferralsPage() {
               />
             </div>
             <select
+              value={commTypeFilter}
+              onChange={(e) => setCommTypeFilter(e.target.value)}
+              className="rounded-xl border border-white/10 bg-[#0b0f19] px-3 py-2 text-xs text-slate-300 focus:border-amber-500 focus:outline-none"
+            >
+              <option value="ALL">All Commission Types</option>
+              <option value="ONE_TIME">Normal User — One-Time</option>
+              <option value="LIFETIME">Moderator — Lifetime</option>
+            </select>
+            <select
               value={commStatusFilter}
               onChange={(e) => setCommStatusFilter(e.target.value)}
               className="rounded-xl border border-white/10 bg-[#0b0f19] px-3 py-2 text-xs text-slate-300 focus:border-amber-500 focus:outline-none"
@@ -701,6 +851,20 @@ export default function AdminReferralsPage() {
               <option value="PENDING">PENDING</option>
               <option value="REVERSED">REVERSED</option>
             </select>
+            <input
+              type="date"
+              value={commStartDate}
+              onChange={(e) => setCommStartDate(e.target.value)}
+              title="Start date"
+              className="rounded-xl border border-white/10 bg-[#0b0f19] px-3 py-2 text-xs text-slate-300 focus:border-amber-500 focus:outline-none"
+            />
+            <input
+              type="date"
+              value={commEndDate}
+              onChange={(e) => setCommEndDate(e.target.value)}
+              title="End date"
+              className="rounded-xl border border-white/10 bg-[#0b0f19] px-3 py-2 text-xs text-slate-300 focus:border-amber-500 focus:outline-none"
+            />
           </div>
 
           <div className="rounded-2xl border border-white/5 bg-[#0b0f19] overflow-hidden">
@@ -710,7 +874,7 @@ export default function AdminReferralsPage() {
                   <tr className="border-b border-white/5 text-[10px] uppercase tracking-wider text-slate-500 bg-white/[0.02]">
                     <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-3">Order ID</th>
-                    <th className="py-3 px-3">Moderator</th>
+                    <th className="py-3 px-3">Referrer</th>
                     <th className="py-3 px-3">Customer</th>
                     <th className="py-3 px-3">Plan</th>
                     <th className="py-3 px-3">Sale ($)</th>
@@ -737,8 +901,17 @@ export default function AdminReferralsPage() {
                           {c.purchaseId || c.paymentId?.orderId || 'N/A'}
                         </td>
                         <td className="py-3 px-3 text-slate-300">
-                          {c.moderatorId?.name || 'Moderator'}
+                          {c.moderatorId?.name || 'Referrer'}
                           <span className="block text-[10px] text-slate-500">{c.moderatorId?.email}</span>
+                          <span
+                            className={`mt-1 inline-flex rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase ${
+                              c.commissionType === 'ONE_TIME'
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                            }`}
+                          >
+                            {c.commissionType === 'ONE_TIME' ? 'Normal · One-Time' : 'Moderator · Lifetime'}
+                          </span>
                         </td>
                         <td className="py-3 px-3 text-slate-300">
                           {c.referredUserId?.email || 'Customer'}
@@ -1227,7 +1400,7 @@ export default function AdminReferralsPage() {
             <form onSubmit={handleUpdateGlobalPolicy} className="mt-4 space-y-3">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Default Platform Commission Rate
+                  Moderator Lifetime Commission Rate (0.50 = 50%)
                 </label>
                 <input
                   type="number"
@@ -1239,6 +1412,33 @@ export default function AdminReferralsPage() {
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"
                 />
               </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Normal User One-Time Commission Rate (0.30 = 30%)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max="0.90"
+                  value={newNormalRate}
+                  onChange={(e) => setNewNormalRate(e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={referralEnabled}
+                  onChange={(e) => setReferralEnabled(e.target.checked)}
+                  className="h-4 w-4 accent-amber-500"
+                />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                  Referral commissions enabled platform-wide
+                </span>
+              </label>
 
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">

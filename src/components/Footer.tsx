@@ -93,7 +93,7 @@ export function Footer() {
             <div className="space-y-2 pt-1 font-display text-[11px] text-slate-500">
               <div className="flex items-center gap-2 text-emerald-400/90">
                 <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-                <span>Non-custodial SaaS • Strict zero withdrawal</span>
+                <span>Non-custodial SaaS • Referral payouts supported</span>
               </div>
               <div className="flex items-center gap-2 text-amber-400/90">
                 <Lock className="h-3.5 w-3.5 shrink-0" />
