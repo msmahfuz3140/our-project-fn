@@ -14,7 +14,7 @@ Production-ready Next.js 16 (App Router) frontend interface with React 19, TypeS
 7. [Admin & Moderator Portals](#-admin--moderator-portals)
 8. [Production Readiness Checklist](#-production-readiness-checklist)
 
----
+--
 
 ## 🎨 Overview & Visual Design
 - **Aesthetic**: Glassmorphic premium telemetry dashboard featuring obsidian palettes (`#05070c`), electric amber (`#f59e0b`), European roulette crimson (`#ef4444`), and verified emerald (`#10b981`).
