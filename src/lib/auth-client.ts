@@ -46,29 +46,65 @@ export const API_BASE = (() => {
   return 'http://localhost:5050/api/v1';
 })();
 
+/**
+ * Legacy bearer token support.
+ *
+ * New sessions are stored only in the backend's HttpOnly cookie. These helpers
+ * remain so an existing deployment can finish its sessions gracefully and so
+ * server-side/native API clients can still send a bearer token.
+ */
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   const local = localStorage.getItem('sloot_token') || localStorage.getItem('auth_token');
   if (local) return local;
-  const match = document.cookie.match(/(?:^|;\s*)(?:sloot_token|token)=([^;]+)/);
-  if (match) return decodeURIComponent(match[1]);
-  return null;
+  const session = sessionStorage.getItem('sloot_token');
+  if (session) return session;
+  // Legacy deployments stored the JWT in a JavaScript-readable cookie.
+  const legacyCookie = document.cookie.match(/(?:^|;\s*)(?:sloot_token|token)=([^;]+)/);
+  return legacyCookie ? decodeURIComponent(legacyCookie[1]) : null;
 }
 
-export function setStoredToken(token: string): void {
+export function hasSessionHint(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (getStoredToken()) return true;
+  if (sessionStorage.getItem('sloot_authed') === '1') return true;
+  return document.cookie.split(';').some((part) => part.trim() === 'sloot_auth=1');
+}
+
+/** Marks this tab as authenticated for cache partitioning (no credential). */
+export function markSessionActive(): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('sloot_token', token);
-  // Set cookie for middleware access (with Secure attribute on HTTPS)
-  const isSecure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `sloot_token=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax${isSecure}`;
+  try {
+    sessionStorage.setItem('sloot_authed', '1');
+  } catch {
+    // Storage can be unavailable in hardened/private browser modes.
+  }
 }
 
 export function clearStoredToken(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('sloot_token');
   localStorage.removeItem('auth_token');
+  sessionStorage.removeItem('sloot_token');
+  sessionStorage.removeItem('sloot_authed');
   const isSecure = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `sloot_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${isSecure}`;
+  document.cookie = `sloot_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${isSecure}`;
+}
+
+/**
+ * If a browser refuses the HttpOnly session cookie (for example a third-party
+ * cookie policy on a direct cross-site API deployment), keep the token for the
+ * current tab only instead of falling back to persistent localStorage.
+ */
+function persistTabScopedFallback(token?: string | null): void {
+  if (!token || typeof window === 'undefined') return;
+  if (hasSessionHint()) return;
+  try {
+    sessionStorage.setItem('sloot_token', token);
+  } catch {
+    // Storage can be unavailable in hardened/private browser modes.
+  }
 }
 
 import { apiCache } from './api-cache';
@@ -212,14 +248,14 @@ async function performFetchRaw<T>(
 
 async function requestRaw<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const method = (options.method || 'GET').toUpperCase();
-  const token = getStoredToken();
-  const cacheKey = `raw:${token ? 'auth:' : 'pub:'}${endpoint}`;
+  const authenticated = hasSessionHint();
+  const cacheKey = `raw:${authenticated ? 'auth:' : 'pub:'}${endpoint}`;
 
   if (method === 'GET') {
     return apiCache.dedupe(
       cacheKey,
       () => performFetchRaw<T>(endpoint, options),
-      { ttlMs: options.ttlMs, staleMs: options.staleMs ?? (token ? 0 : undefined), bypassCache: options.bypassCache, persist: options.persist }
+      { ttlMs: options.ttlMs, staleMs: options.staleMs ?? (authenticated ? 0 : undefined), bypassCache: options.bypassCache, persist: options.persist }
     );
   }
 
@@ -231,16 +267,16 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   // If GET request, route through in-memory cache and deduplication
   if (method === 'GET') {
-    const token = getStoredToken();
-    const cacheKey = `${token ? 'auth:' : 'pub:'}${endpoint}`;
+    const authenticated = hasSessionHint();
+    const cacheKey = `${authenticated ? 'auth:' : 'pub:'}${endpoint}`;
     return apiCache.dedupe(
       cacheKey,
       () => performFetch<T>(endpoint, options),
       {
         ttlMs: options.ttlMs,
-        staleMs: options.staleMs ?? (token ? 0 : undefined),
+        staleMs: options.staleMs ?? (authenticated ? 0 : undefined),
         bypassCache: options.bypassCache,
-        persist: options.persist ?? !token
+        persist: options.persist ?? !authenticated
       }
     );
   }
@@ -389,9 +425,8 @@ export const authClient = {
       method: 'POST',
       body: JSON.stringify(input)
     });
-    if (res.token) {
-      setStoredToken(res.token);
-    }
+    persistTabScopedFallback(res.token);
+    markSessionActive();
     return res;
   },
 
@@ -400,9 +435,8 @@ export const authClient = {
       method: 'POST',
       body: JSON.stringify(input)
     });
-    if (res.token) {
-      setStoredToken(res.token);
-    }
+    persistTabScopedFallback(res.token);
+    markSessionActive();
     return res;
   },
 
@@ -411,9 +445,8 @@ export const authClient = {
       method: 'POST',
       body: JSON.stringify(input)
     });
-    if (res.token) {
-      setStoredToken(res.token);
-    }
+    persistTabScopedFallback(res.token);
+    markSessionActive();
     return res;
   },
 

@@ -9,7 +9,7 @@ import {
   VerifyOtpInput,
   ResendOtpInput
 } from '../shared/auth';
-import { authClient, getStoredToken, clearStoredToken } from '../lib/auth-client';
+import { authClient, hasSessionHint, markSessionActive, clearStoredToken } from '../lib/auth-client';
 import {
   clearDisclaimerPendingAfterLogin,
   markDisclaimerPendingAfterLogin,
@@ -37,18 +37,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshUser = useCallback(async () => {
-    const savedToken = getStoredToken();
-    if (!savedToken) {
+    // Sessions normally live in an HttpOnly cookie, which JavaScript cannot
+    // inspect. The non-secret presence hint tells us whether a server check is
+    // worthwhile; otherwise guests avoid a guaranteed 401 on every page load.
+    if (!hasSessionHint()) {
       setUser(null);
       setToken(null);
       setIsLoading(false);
       return;
     }
 
-    setToken(savedToken);
     try {
       const me = await authClient.getMe();
+      markSessionActive();
       setUser(me);
+      setToken(hasSessionHint() ? 'cookie-session' : null);
     } catch {
       clearStoredToken();
       setUser(null);
@@ -67,9 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // A fresh login should show the mandatory disclaimer exactly once again.
     resetDisclaimerAcknowledgement(res.user.id);
     markDisclaimerPendingAfterLogin();
-    setUser(res.user);
+    // Credential-issuing responses intentionally omit account-state fields.
+    // Hydrate the authenticated user (including mustChangePassword) from /auth/me
+    // so the forced-password-change guard keeps working.
+    let hydratedUser = res.user;
+    try {
+      hydratedUser = await authClient.getMe();
+      markSessionActive();
+    } catch {
+      // Keep the sanitised login user if the follow-up read is unavailable.
+    }
+    setUser(hydratedUser);
     setToken(res.token);
-    return res;
+    return { ...res, user: hydratedUser };
   };
 
   const register = async (input: RegisterInput): Promise<AuthResponse> => {

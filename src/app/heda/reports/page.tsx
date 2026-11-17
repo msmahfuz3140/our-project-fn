@@ -74,10 +74,6 @@ export default function AdminReportsPage() {
   const handleExportCsv = async (reportType: string) => {
     setDownloadingType(reportType);
     try {
-      const token = typeof window !== 'undefined'
-        ? (localStorage.getItem('sloot_token') || localStorage.getItem('auth_token'))
-        : null;
-
       const url = authClient.getReportExportUrl(reportType, {
         startDate: startDate || undefined,
         endDate: endDate || undefined,
@@ -85,9 +81,6 @@ export default function AdminReportsPage() {
       });
 
       const res = await fetch(url, {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
         credentials: 'include'
       });
 

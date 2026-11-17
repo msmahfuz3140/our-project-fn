@@ -161,24 +161,43 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
         document.head.appendChild(script);
       }
 
-      const checkInterval = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(checkInterval);
-          renderWidget();
-        }
-      }, 100);
+      let interval: ReturnType<typeof setInterval> | undefined;
+      let timeout: ReturnType<typeof setTimeout> | undefined;
 
-      const timeout = setTimeout(() => {
-        clearInterval(checkInterval);
-        if (!window.turnstile) {
-          setStatus('error');
-          setErrorMessage('Security check timed out loading. Please refresh.');
-        }
-      }, 10000);
+      const stopWaiting = () => {
+        if (interval) clearInterval(interval);
+        if (timeout) clearTimeout(timeout);
+      };
+
+      const handleScriptLoad = () => {
+        stopWaiting();
+        renderWidget();
+      };
+
+      // Prefer the script load event; polling is only a fallback for cached
+      // or previously-injected scripts.
+      script.addEventListener('load', handleScriptLoad);
+      if (window.turnstile) {
+        handleScriptLoad();
+      } else {
+        interval = setInterval(() => {
+          if (window.turnstile) {
+            stopWaiting();
+            renderWidget();
+          }
+        }, 150);
+        timeout = setTimeout(() => {
+          stopWaiting();
+          if (!window.turnstile) {
+            setStatus('error');
+            setErrorMessage('Security check timed out loading. Please refresh.');
+          }
+        }, 10000);
+      }
 
       return () => {
-        clearInterval(checkInterval);
-        clearTimeout(timeout);
+        stopWaiting();
+        script?.removeEventListener('load', handleScriptLoad);
       };
     }, [renderWidget]);
 

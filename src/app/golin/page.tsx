@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { Turnstile, TurnstileRef } from '../../components/Turnstile';
+import { sanitizeRedirectPath } from '../../lib/safe-redirect';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
@@ -52,11 +53,7 @@ export default function LoginPage() {
 
       const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const redirectParam = urlParams?.get('redirect');
-      if (redirectParam) {
-        router.push(redirectParam);
-      } else {
-        router.push('/dashboard/tool');
-      }
+      router.push(sanitizeRedirectPath(redirectParam));
     } catch (err: any) {
       setError(err?.message || 'Invalid email or password. Please verify and try again.');
       turnstileRef.current?.reset();

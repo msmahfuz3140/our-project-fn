@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
-import { authClient, getStoredToken } from '../../../lib/auth-client';
+import { authClient } from '../../../lib/auth-client';
 import { AccessStatusResponse, SubscriptionStatus } from '../../../shared/subscriptions';
 import { PremiumLockOverlay } from '../../../components/PremiumLockOverlay';
 import { useToolWidget } from '../../../context/ToolWidgetContext';

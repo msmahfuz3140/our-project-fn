@@ -75,7 +75,7 @@ export default function PrivacyPage() {
                 4. Cookies and Session Storage
               </h2>
               <p>
-                We use secure, HTTP-only session tokens and localStorage keys (<code>sloot_token</code>) strictly to maintain your authenticated state across page refreshes. We do not use third-party tracking pixels or cross-site tracking cookies.
+                We use secure, HTTP-only session cookies to keep you signed in. The session credential is never readable by client-side JavaScript, and only a non-secret presence flag is stored in the browser. We do not use third-party tracking pixels or cross-site tracking cookies.
               </p>
             </section>
 
