@@ -5,8 +5,13 @@ export const RegisterSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters long').default('Member').optional(),
   email: z.string().email('Invalid email address format'),
   phone: z.string().optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters long'),
-  referralCode: z.string().optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+  referralCode: z
+    .string()
+    .trim()
+    .min(3, 'Please enter a valid referral code.')
+    .max(64, 'Please enter a valid referral code.')
+    .transform((value) => value.toUpperCase()),
   turnstileToken: z.string().optional()
 });
 
@@ -81,14 +86,31 @@ export interface AuthUser {
   hasActiveSubscription: boolean;
   subscriptionPlanId?: string;
   subscriptionExpiresAt?: string;
+  adminTwoFactorEnabled?: boolean;
+  adminTwoFactorVerified?: boolean;
   createdAt: string;
+}
+
+export interface Admin2FASetupData {
+  otpauthUrl: string;
+  manualKey: string;
+  issuer: string;
+  accountName: string;
+  expiresAt: string;
 }
 
 export interface AuthResponse {
   user: AuthUser;
-  token: string;
+  token?: string;
   requiresVerification?: boolean;
   verificationTarget?: string;
   verificationPurpose?: OtpPurpose;
-  devOtp?: string;
+  emailDeliveryPending?: boolean;
+  requiresAdmin2FA?: boolean;
+  adminTwoFactorMode?: 'SETUP' | 'VERIFY' | 'REPLACE';
+  adminTwoFactorChallengeToken?: string;
+  adminTwoFactorExpiresAt?: string;
+  adminTwoFactorSetup?: Admin2FASetupData;
+  recoveryCodes?: string[];
+  recoveryCodeUsed?: boolean;
 }

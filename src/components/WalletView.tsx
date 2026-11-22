@@ -25,6 +25,15 @@ import {
 import { authClient } from '../lib/auth-client';
 import { useAuth } from '../context/AuthContext';
 
+interface WithdrawalMethod {
+  id: string;
+  currency: string;
+  network: string;
+  label: string;
+  addressPattern: string;
+  addressHint: string;
+}
+
 interface WalletSummary {
   wallet: {
     availableBalanceCents: number;
@@ -71,7 +80,7 @@ const TYPE_LABELS: Record<string, string> = {
   ADJUSTMENT: 'Balance Adjustment'
 };
 
-const NETWORKS = ['USDT_TRC20', 'USDT_ERC20', 'USDT_BEP20', 'BTC', 'ETH', 'TRX', 'LTC', 'SOL', 'DOGE', 'OTHER'];
+
 
 function formatCents(cents: number): string {
   const safe = Number.isFinite(cents) ? cents : 0;
@@ -97,7 +106,10 @@ export function WalletView() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAddress, setWithdrawAddress] = useState('');
-  const [withdrawNetwork, setWithdrawNetwork] = useState('USDT_TRC20');
+  const [withdrawMethodId, setWithdrawMethodId] = useState('');
+  const [withdrawMethods, setWithdrawMethods] = useState<WithdrawalMethod[]>([]);
+  const [withdrawMethodsError, setWithdrawMethodsError] = useState('');
+  const [withdrawStep, setWithdrawStep] = useState<'form' | 'review'>('form');
   const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
   const [withdrawError, setWithdrawError] = useState('');
   const [idempotencyKey, setIdempotencyKey] = useState('');
@@ -120,6 +132,26 @@ export function WalletView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    const loadMethods = async () => {
+      try {
+        const response = await authClient.getWithdrawalMethods();
+        if (!active) return;
+        const methods = response?.methods || [];
+        setWithdrawMethods(methods);
+        setWithdrawMethodsError('');
+        setWithdrawMethodId((current) => current || methods[0]?.id || '');
+      } catch {
+        if (active) setWithdrawMethodsError('Withdrawal methods could not be loaded. Please refresh.');
+      }
+    };
+    void loadMethods();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
@@ -148,17 +180,19 @@ export function WalletView() {
   const availableCents = wallet?.availableBalanceCents || 0;
   const availableUsd = availableCents / 100;
   const requestedUsd = Number(withdrawAmount) || 0;
+  const selectedMethod = withdrawMethods.find((method) => method.id === withdrawMethodId);
 
   const openWithdraw = () => {
     setWithdrawAmount('');
     setWithdrawAddress('');
-    setWithdrawNetwork('USDT_TRC20');
+    setWithdrawMethodId((current) => current || withdrawMethods[0]?.id || '');
     setWithdrawError('');
+    setWithdrawStep('form');
     setIdempotencyKey(newIdempotencyKey());
     setWithdrawOpen(true);
   };
 
-  const submitWithdrawal = async (event: React.FormEvent) => {
+  const reviewWithdrawal = (event: React.FormEvent) => {
     event.preventDefault();
     setWithdrawError('');
     if (!requestedUsd || requestedUsd <= 0) {
@@ -169,12 +203,30 @@ export function WalletView() {
       setWithdrawError('The requested amount exceeds your available withdrawal balance.');
       return;
     }
-    if (withdrawAddress.trim().length < 8) {
-      setWithdrawError('Enter a valid receiving wallet address.');
+    if (!selectedMethod) {
+      setWithdrawError('Select a supported cryptocurrency and network.');
       return;
     }
-    if (!withdrawNetwork) {
-      setWithdrawError('Select the receiving payment network.');
+    if (!withdrawAddress.trim()) {
+      setWithdrawError('Enter your receiving wallet address.');
+      return;
+    }
+    try {
+      if (!new RegExp(selectedMethod.addressPattern).test(withdrawAddress.trim())) {
+        setWithdrawError(`That address does not look valid for ${selectedMethod.label}. ${selectedMethod.addressHint}`);
+        return;
+      }
+    } catch {
+      setWithdrawError('The selected withdrawal method could not be validated. Please choose another method.');
+      return;
+    }
+    setWithdrawStep('review');
+  };
+
+  const submitWithdrawal = async () => {
+    setWithdrawError('');
+    if (!selectedMethod || !idempotencyKey) {
+      setWithdrawError('Please reopen the withdrawal form and try again.');
       return;
     }
 
@@ -182,18 +234,20 @@ export function WalletView() {
     try {
       await authClient.requestWithdrawal({
         amountUsd: requestedUsd,
+        methodId: selectedMethod.id,
         walletAddress: withdrawAddress.trim(),
-        network: withdrawNetwork,
         idempotencyKey
       });
       setWithdrawOpen(false);
+      setWithdrawStep('form');
       setNotice({
         type: 'success',
-        text: 'Withdrawal request submitted. The amount is now reserved and pending admin review.'
+        text: 'Withdrawal request submitted. The amount is reserved and pending admin review.'
       });
       await load(true);
     } catch (err: any) {
       setWithdrawError(err?.message || 'Withdrawal request failed.');
+      setWithdrawStep('form');
     } finally {
       setWithdrawSubmitting(false);
     }
@@ -416,7 +470,7 @@ export function WalletView() {
                     </span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>{withdrawal.network}</span>
+                    <span>{withdrawal.withdrawalCurrency ? `${withdrawal.withdrawalCurrency} · ` : ''}{withdrawal.network}</span>
                     <span className="font-mono text-slate-300">{formatCents(withdrawal.amountCents)}</span>
                   </div>
                   <p className="mt-1 text-[9px] text-slate-500">{new Date(withdrawal.createdAt).toLocaleString()}</p>
@@ -502,98 +556,174 @@ export function WalletView() {
       {withdrawOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
           <form
-            onSubmit={submitWithdrawal}
+            onSubmit={reviewWithdrawal}
             className="w-full max-w-md space-y-4 rounded-2xl border border-emerald-500/30 bg-[#07100c] p-5 shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">Withdraw Funds</h3>
+                <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                  {withdrawStep === 'form' ? 'Withdraw Funds' : 'Confirm Withdrawal'}
+                </h3>
                 <p className="mt-1 text-[10px] text-emerald-300">
                   Available: <span className="font-mono font-bold">{formatCents(availableCents)}</span>
                 </p>
               </div>
-              <button type="button" onClick={() => setWithdrawOpen(false)} className="text-slate-400 hover:text-white">
+              <button
+                type="button"
+                onClick={() => {
+                  setWithdrawOpen(false);
+                  setWithdrawStep('form');
+                }}
+                className="text-slate-400 hover:text-white"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Withdrawal Amount (USD)
-              </label>
-              <input
-                type="number"
-                min="0.01"
-                max={availableUsd}
-                step="0.01"
-                required
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                placeholder={`Up to ${availableUsd.toFixed(2)}`}
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 font-mono text-sm text-white focus:border-emerald-500 focus:outline-none"
-              />
-            </div>
+            {withdrawStep === 'form' ? (
+              <>
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Withdrawal Amount (USD)
+                  </label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    max={availableUsd}
+                    step="0.01"
+                    required
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder={`Up to ${availableUsd.toFixed(2)}`}
+                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 font-mono text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
 
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Receiving Wallet Address
-              </label>
-              <input
-                type="text"
-                required
-                value={withdrawAddress}
-                onChange={(e) => setWithdrawAddress(e.target.value)}
-                placeholder="Your personal crypto wallet address"
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
-              />
-            </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Cryptocurrency &amp; Network
+                  </label>
+                  <select
+                    required
+                    value={withdrawMethodId}
+                    onChange={(e) => {
+                      setWithdrawMethodId(e.target.value);
+                      setWithdrawAddress('');
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  >
+                    {withdrawMethods.length === 0 && <option value="">No payout methods available</option>}
+                    {withdrawMethods.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.label}
+                      </option>
+                    ))}
+                  </select>
+                  {withdrawMethodsError && (
+                    <p className="mt-1 text-[10px] text-rose-300">{withdrawMethodsError}</p>
+                  )}
+                </div>
 
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Payment Network
-              </label>
-              <select
-                value={withdrawNetwork}
-                onChange={(e) => setWithdrawNetwork(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
-              >
-                {NETWORKS.map((network) => (
-                  <option key={network} value={network}>
-                    {network.replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Receiving Wallet Address
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={withdrawAddress}
+                    onChange={(e) => setWithdrawAddress(e.target.value.trim())}
+                    placeholder="Your personal crypto wallet address"
+                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                  {selectedMethod && (
+                    <p className="mt-1 text-[10px] leading-relaxed text-slate-500">{selectedMethod.addressHint}</p>
+                  )}
+                </div>
 
-            {withdrawError && (
-              <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{withdrawError}</span>
-              </div>
+                {withdrawError && (
+                  <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{withdrawError}</span>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[10px] leading-relaxed text-amber-200/80">
+                  Review the amount, cryptocurrency, network and destination address on the next step. The requested
+                  amount is reserved only after you confirm. Payouts are reviewed and sent manually by an administrator.
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-white/10 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawOpen(false)}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!selectedMethod || withdrawMethods.length === 0}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Review Withdrawal
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2 rounded-xl border border-emerald-500/20 bg-black/30 p-4 text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Amount</span>
+                    <span className="font-mono font-bold text-emerald-300">{formatCents(Math.round(requestedUsd * 100))}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Cryptocurrency</span>
+                    <span className="font-bold text-white">{selectedMethod?.currency}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Network</span>
+                    <span className="text-right text-white">{selectedMethod?.network}</span>
+                  </div>
+                  <div className="border-t border-white/10 pt-2">
+                    <span className="text-slate-500">Destination address</span>
+                    <p className="mt-1 break-all font-mono text-[10px] text-slate-200">{withdrawAddress}</p>
+                  </div>
+                </div>
+
+                {withdrawError && (
+                  <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{withdrawError}</span>
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[10px] leading-relaxed text-amber-200/80">
+                  Confirm that the cryptocurrency, network and address are correct. Blockchain transfers cannot be
+                  reversed after the administrator sends the payout.
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-white/10 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawStep('form')}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitWithdrawal}
+                    disabled={withdrawSubmitting}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black disabled:opacity-50"
+                  >
+                    {withdrawSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    {withdrawSubmitting ? 'Submitting…' : 'Confirm & Submit'}
+                  </button>
+                </div>
+              </>
             )}
-
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[10px] leading-relaxed text-amber-200/80">
-              The requested amount is reserved immediately. If the admin rejects the request, the exact amount is
-              returned to your available balance. Payment is only marked sent after the admin confirms the transfer.
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-white/10 pt-3">
-              <button
-                type="button"
-                onClick={() => setWithdrawOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={withdrawSubmitting}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black disabled:opacity-50"
-              >
-                {withdrawSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                {withdrawSubmitting ? 'Submitting…' : 'Submit Request'}
-              </button>
-            </div>
           </form>
         </div>
       )}

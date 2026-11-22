@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../../components/admin/ConfirmDialog';
 import { AdminLoadingSkeleton } from '../../../components/admin/AdminLoadingSkeleton';
 import { AdminEmptyState } from '../../../components/admin/AdminEmptyState';
 import { AdminErrorState } from '../../../components/admin/AdminErrorState';
+import { AdminTwoFactorPanel } from '../../../components/admin/AdminTwoFactorPanel';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -107,6 +108,9 @@ export default function AdminSecurityPage() {
           Rescan Security State
         </button>
       </div>
+
+      {/* Mandatory Admin 2FA management */}
+      <AdminTwoFactorPanel />
 
       {/* Security Health Scorecard */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

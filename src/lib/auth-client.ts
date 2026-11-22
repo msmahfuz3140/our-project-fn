@@ -425,8 +425,10 @@ export const authClient = {
       method: 'POST',
       body: JSON.stringify(input)
     });
-    persistTabScopedFallback(res.token);
-    markSessionActive();
+    if (res.token) {
+      persistTabScopedFallback(res.token);
+      markSessionActive();
+    }
     return res;
   },
 
@@ -435,8 +437,12 @@ export const authClient = {
       method: 'POST',
       body: JSON.stringify(input)
     });
-    persistTabScopedFallback(res.token);
-    markSessionActive();
+    if (res.token) {
+      persistTabScopedFallback(res.token);
+      markSessionActive();
+    } else if (res.requiresAdmin2FA) {
+      clearStoredToken();
+    }
     return res;
   },
 
@@ -452,6 +458,59 @@ export const authClient = {
 
   async resendOtp(input: ResendOtpInput): Promise<{ success: boolean; cooldownSeconds: number }> {
     return request<{ success: boolean; cooldownSeconds: number }>('/auth/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify(input)
+    });
+  },
+
+  async verifyAdminTwoFactor(input: {
+    challengeToken: string;
+    code?: string;
+    recoveryCode?: string;
+  }): Promise<AuthResponse> {
+    const res = await request<AuthResponse>('/auth/admin-2fa/verify', {
+      method: 'POST',
+      body: JSON.stringify(input)
+    });
+    if (res.token) {
+      persistTabScopedFallback(res.token);
+      markSessionActive();
+    }
+    return res;
+  },
+
+  async getAdminTwoFactorStatus(): Promise<any> {
+    return request<any>('/auth/admin-2fa/status', { bypassCache: true, ttlMs: 0 });
+  },
+
+  async regenerateAdminRecoveryCodes(code: string): Promise<{ recoveryCodes: string[] }> {
+    return request<{ recoveryCodes: string[] }>('/auth/admin-2fa/recovery-codes/regenerate', {
+      method: 'POST',
+      body: JSON.stringify({ code })
+    });
+  },
+
+  async startAdminTwoFactorReplacement(code: string): Promise<any> {
+    return request<any>('/auth/admin-2fa/replace/start', {
+      method: 'POST',
+      body: JSON.stringify({ code })
+    });
+  },
+
+  async verifyAdminTwoFactorReplacement(input: { challengeToken: string; code: string }): Promise<AuthResponse> {
+    const res = await request<AuthResponse>('/auth/admin-2fa/replace/verify', {
+      method: 'POST',
+      body: JSON.stringify(input)
+    });
+    if (res.token) {
+      persistTabScopedFallback(res.token);
+      markSessionActive();
+    }
+    return res;
+  },
+
+  async disableAdminTwoFactor(input: { password: string; code: string }): Promise<any> {
+    return request<any>('/auth/admin-2fa/disable', {
       method: 'POST',
       body: JSON.stringify(input)
     });
@@ -928,10 +987,23 @@ export const authClient = {
     return request<any>(`/wallet/withdrawals${qs}`, { bypassCache: true, ttlMs: 0 });
   },
 
+  async getWithdrawalMethods(): Promise<{
+    methods: Array<{
+      id: string;
+      currency: string;
+      network: string;
+      label: string;
+      addressPattern: string;
+      addressHint: string;
+    }>;
+  }> {
+    return request<any>('/wallet/withdrawal-methods', { ttlMs: 300_000, persist: true });
+  },
+
   async requestWithdrawal(data: {
     amountUsd: number;
+    methodId: string;
     walletAddress: string;
-    network: string;
     idempotencyKey?: string;
   }): Promise<any> {
     return request<any>('/wallet/withdrawals', {
@@ -1189,6 +1261,20 @@ export const authClient = {
     });
   },
 
+  async getAdminUserTwoFactorStatus(userId: string): Promise<any> {
+    return request<any>(`/admin/security/2fa/status/${encodeURIComponent(userId)}`, {
+      bypassCache: true,
+      ttlMs: 0
+    });
+  },
+
+  async resetAdminUserTwoFactor(userId: string, reason: string, currentTotpCode: string): Promise<any> {
+    return request<any>(`/admin/security/2fa/reset/${encodeURIComponent(userId)}`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, currentTotpCode })
+    });
+  },
+
   // --- Extended Admin: Roulette Tool Telemetry ---
   async getAdminToolTelemetry(): Promise<any> {
     return request<any>('/admin/tool/telemetry');
@@ -1205,6 +1291,20 @@ export const authClient = {
   // --- Extended Admin: Notification Management ---
   async getAdminNotificationMetrics(): Promise<any> {
     return request<any>('/admin/notifications/metrics');
+  },
+
+  async getAdminEmailNotificationMetrics(): Promise<any> {
+    return request<any>('/admin/notifications/email/metrics', { bypassCache: true });
+  },
+
+  async getAdminEmailNotifications(params?: Record<string, any>): Promise<any> {
+    return request<any>(`/admin/notifications/email${buildQueryString(params)}`, { bypassCache: true });
+  },
+
+  async retryAdminEmailNotification(id: string): Promise<any> {
+    return request<any>(`/admin/notifications/email/${encodeURIComponent(id)}/retry`, {
+      method: 'POST'
+    });
   },
 
   async sendAdminTargetedNotification(data: { title: string; message: string; targetType: string; targetUserId?: string; link?: string }): Promise<any> {

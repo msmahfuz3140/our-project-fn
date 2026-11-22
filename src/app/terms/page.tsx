@@ -71,10 +71,10 @@ export default function TermsPage() {
 
             <section className="space-y-3">
               <h2 className="font-display text-lg font-bold uppercase text-white tracking-wide">
-                4. Strict No-Custody & Zero-Withdrawal Boundary
+                4. No Gambling Custody &amp; Referral Wallet Boundary
               </h2>
               <p>
-                Roulette Accuracy has no wallet custody, balance storage, or client fund withdrawal mechanisms. Any attempt to use the platform for money transmission, currency laundering, or financial intermediation is strictly prohibited and grounds for immediate account termination.
+                Roulette Accuracy does not accept betting deposits, hold player gambling balances, or act as a money transmitter. Referral commissions may be credited to a platform earnings wallet and withdrawn in a supported cryptocurrency through an administrator-reviewed payout workflow. Submitting a withdrawal request reserves the requested amount but does not guarantee payment; requests may be approved, rejected, or delayed for verification. Any attempt to use the platform for money laundering, fraud, or financial intermediation is strictly prohibited and grounds for immediate account termination.
               </p>
             </section>
 

@@ -110,8 +110,9 @@ export default function AdminWithdrawalsPage() {
         await authClient.rejectAdminWithdrawal(action.withdrawal._id, note.trim());
         setMessage({ type: 'success', text: 'Withdrawal rejected and the exact amount refunded to the user’s available balance.' });
       } else {
-        await authClient.markAdminWithdrawalPaid(action.withdrawal._id, txHash.trim() || undefined);
-        setMessage({ type: 'success', text: 'Withdrawal marked as paid/completed.' });
+        if (txHash.trim().length < 6) throw new Error('Enter the transaction hash or payout reference before marking paid.');
+        await authClient.markAdminWithdrawalPaid(action.withdrawal._id, txHash.trim());
+        setMessage({ type: 'success', text: 'Withdrawal marked as paid/completed. A confirmation email was queued for the user.' });
       }
       setAction(null);
       await load(true);
@@ -241,6 +242,7 @@ export default function AdminWithdrawalsPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-sky-300">
+                        {withdrawal.withdrawalCurrency ? `${withdrawal.withdrawalCurrency} · ` : ''}
                         {withdrawal.network}
                       </div>
                       <div className="mt-1 flex max-w-[240px] items-center gap-1">
@@ -359,9 +361,13 @@ export default function AdminWithdrawalsPage() {
                   <span className="text-slate-500">User</span>
                   <span>{action.withdrawal.userId?.email}</span>
                 </div>
-                <div className="mt-1 flex justify-between">
+                <div className="mt-1 flex justify-between gap-3">
                   <span className="text-slate-500">Amount</span>
                   <span className="font-mono font-bold text-emerald-300">{formatCents(action.withdrawal.amountCents)}</span>
+                </div>
+                <div className="mt-1 flex justify-between gap-3">
+                  <span className="text-slate-500">Cryptocurrency</span>
+                  <span>{action.withdrawal.withdrawalCurrency || action.withdrawal.currency || 'USD'}</span>
                 </div>
                 <div className="mt-1 flex justify-between gap-3">
                   <span className="text-slate-500">Network</span>
@@ -403,16 +409,16 @@ export default function AdminWithdrawalsPage() {
               {action.type === 'paid' && (
                 <div>
                   <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Transaction Hash (optional)
+                    Transaction Hash / Payout Reference *
                   </label>
                   <input
                     value={txHash}
                     onChange={(e) => setTxHash(e.target.value)}
-                    placeholder="On-chain transaction hash"
+                    placeholder="On-chain transaction hash or payout reference"
                     className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 font-mono text-xs text-white focus:border-emerald-500 focus:outline-none"
                   />
                   <p className="mt-1 text-[10px] text-slate-500">
-                    Marking paid permanently completes this withdrawal and notifies the user.
+                    Required. Marking paid permanently completes this withdrawal and sends a confirmation email to the user.
                   </p>
                 </div>
               )}

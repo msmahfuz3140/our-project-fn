@@ -1,19 +1,20 @@
 import React from 'react';
 import {
   Activity,
-  ArrowLeftRight,
+  ArrowUpRight,
   BarChart3,
-  Fingerprint,
+  Headphones,
   Lock,
-  Radar,
   ShieldCheck,
+  Sparkles,
   Table2,
-  Waves
+  Users
 } from 'lucide-react';
 
 /**
- * Homepage capability bento. Every statement describes the shipped engine;
- * no speculative win rates or fabricated live values are shown.
+ * Public capability grid. This intentionally describes member benefits and
+ * product outcomes only — no backend architecture, provider credentials,
+ * internal formulas or implementation steps.
  */
 export function FeatureBento() {
   return (
@@ -24,45 +25,44 @@ export function FeatureBento() {
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="reveal mx-auto mb-12 max-w-2xl text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 backdrop-blur-md">
-            <Fingerprint className="h-3.5 w-3.5 text-amber-400" />
+            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
             <span className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400">
-              Engine anatomy
+              Member experience
             </span>
           </div>
           <h2 className="font-display text-3xl font-black uppercase leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
-            Precision, without <span className="text-gold-shimmer">the noise</span>
+            Everything you need, <span className="text-gold-shimmer">in one place</span>
           </h2>
           <p className="mx-auto mt-4 max-w-xl font-body text-sm leading-relaxed text-slate-400 sm:text-base">
-            Every layer of Roulette Accuracy is built around one principle: show what can be
-            calculated, never invent what cannot.
+            A focused member workspace with live table views, clear visual analysis and straightforward account tools.
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
-          {/* Direction-aware engine */}
+          {/* Main card */}
           <div className="reveal glass glass-sheen group relative overflow-hidden rounded-3xl p-6 md:col-span-3 md:row-span-2 sm:p-7">
             <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-amber-500/10 blur-3xl transition-opacity duration-500 group-hover:opacity-100" />
             <div className="relative z-10 flex h-full flex-col">
               <div className="mb-5 flex items-center justify-between">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-500/10 text-amber-300">
-                  <ArrowLeftRight className="h-5 w-5" />
+                  <Table2 className="h-5 w-5" />
                 </span>
                 <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 font-display text-[8px] font-black uppercase tracking-[0.18em] text-emerald-300">
-                  Two directions
+                  Live tables
                 </span>
               </div>
               <h3 className="font-display text-lg font-black uppercase tracking-tight text-white sm:text-xl">
-                Direction-aware engine
+                A complete live table lobby
               </h3>
               <p className="mt-2 max-w-md font-body text-sm leading-relaxed text-slate-400">
-                Clockwise and counter-clockwise rotations are calculated independently. Switching
-                direction recalculates the main pocket, n9 sector and n4 ranges without a reload.
+                Follow supported European roulette tables in one place and switch between tables without losing your
+                session.
               </p>
 
               <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/[0.06] bg-[#060a12]/70 p-4">
                 <div className="mb-3 flex items-center justify-between font-display text-[8px] uppercase tracking-[0.18em] text-slate-500">
-                  <span>Rotation model</span>
-                  <span className="text-amber-400/80">Live recalculation</span>
+                  <span>Your workspace</span>
+                  <span className="text-amber-400/80">One dashboard</span>
                 </div>
                 <svg viewBox="0 0 320 130" className="h-auto w-full" aria-hidden="true">
                   <defs>
@@ -82,13 +82,11 @@ export function FeatureBento() {
                   <circle cx="160" cy="70" r="5" fill="#f59e0b" />
                   <circle cx="160" cy="70" r="12" fill="none" stroke="#f59e0b" strokeOpacity="0.35" />
                   <text x="160" y="74" textAnchor="middle" fill="#f8fafc" fontSize="9" fontFamily="Orbitron, sans-serif" fontWeight="800">RA</text>
-                  <text x="218" y="86" fill="#fbbf24" fontSize="7" fontFamily="Orbitron, sans-serif" letterSpacing="1.5">CW</text>
-                  <text x="76" y="50" fill="#34d399" fontSize="7" fontFamily="Orbitron, sans-serif" letterSpacing="1.5">CCW</text>
                 </svg>
               </div>
 
               <div className="mt-auto flex flex-wrap gap-2 pt-5">
-                {['Main pocket', 'n9 sector', 'Top over n4', 'Top under n4'].map((item) => (
+                {['Live table overview', 'Wheel view', 'Travel chart', 'History'].map((item) => (
                   <span
                     key={item}
                     className="rounded-lg border border-white/10 bg-white/[0.035] px-2.5 py-1 font-display text-[9px] font-semibold uppercase tracking-wider text-slate-300"
@@ -100,22 +98,21 @@ export function FeatureBento() {
             </div>
           </div>
 
-          {/* Travel mathematics */}
+          {/* Analysis */}
           <div className="reveal glass group relative overflow-hidden rounded-3xl p-5 md:col-span-3 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-300">
-                  <Waves className="h-5 w-5" />
+                  <BarChart3 className="h-5 w-5" />
                 </span>
                 <h3 className="font-display text-base font-black uppercase tracking-tight text-white">
-                  Travel mathematics
+                  Clear visual analysis
                 </h3>
                 <p className="mt-1.5 font-body text-xs leading-relaxed text-slate-400">
-                  Pocket distances, rolling averages and the ±7 rhythm band derived from received
-                  spins only.
+                  Charts and summaries that make table activity easy to follow at a glance.
                 </p>
               </div>
-              <BarChart3 className="h-5 w-5 shrink-0 text-slate-600" />
+              <Activity className="h-5 w-5 shrink-0 text-slate-600" />
             </div>
             <svg viewBox="0 0 320 70" className="mt-4 h-auto w-full" aria-hidden="true">
               <defs>
@@ -130,7 +127,7 @@ export function FeatureBento() {
             </svg>
           </div>
 
-          {/* Security */}
+          {/* Account security */}
           <div className="reveal glass group relative overflow-hidden rounded-3xl p-5 md:col-span-3 sm:p-6">
             <div className="flex items-start gap-4">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-emerald-300">
@@ -138,15 +135,15 @@ export function FeatureBento() {
               </span>
               <div>
                 <h3 className="font-display text-base font-black uppercase tracking-tight text-white">
-                  Server-side by design
+                  Protected member access
                 </h3>
                 <p className="mt-1.5 max-w-md font-body text-xs leading-relaxed text-slate-400">
-                  Provider keys are encrypted at rest and signed by the backend proxy. The SK key
-                  never enters browser JavaScript or localStorage.
+                  Email verification, secure sign-in and subscriber-only access keep member accounts and private tools
+                  protected.
                 </p>
                 <div className="mt-3 flex items-center gap-2 font-mono text-[9px] uppercase tracking-wider text-emerald-400/80">
                   <Lock className="h-3 w-3" />
-                  HMAC-SHA256 signed headers
+                  Verified accounts only
                 </div>
               </div>
             </div>
@@ -154,24 +151,24 @@ export function FeatureBento() {
 
           {/* Small cards */}
           <FeatureCard
-            icon={<Table2 className="h-5 w-5" />}
+            icon={<Users className="h-5 w-5" />}
             tint="border-amber-500/25 bg-amber-500/10 text-amber-300"
-            title="20+ live tables"
-            description="Evolution Gaming and Pragmatic Play feeds streamed through the authenticated backend."
+            title="Referral program"
+            description="Share your personal code, track referred members and manage referral earnings from your wallet."
             className="md:col-span-2"
           />
           <FeatureCard
-            icon={<BarChart3 className="h-5 w-5" />}
+            icon={<ArrowUpRight className="h-5 w-5" />}
             tint="border-purple-500/25 bg-purple-500/10 text-purple-300"
-            title="Three synchronized views"
-            description="Wheel, travel chart and live graph always render from the same prediction response."
+            title="Simple plan management"
+            description="Choose a pass, pay with supported cryptocurrencies and see your access status in your dashboard."
             className="md:col-span-2"
           />
           <FeatureCard
-            icon={<Radar className="h-5 w-5" />}
+            icon={<Headphones className="h-5 w-5" />}
             tint="border-rose-500/25 bg-rose-500/10 text-rose-300"
-            title="Sector intelligence"
-            description="Main pocket, n9 neighborhood and Top Over / Under n4 ranges mapped per direction."
+            title="Member support"
+            description="Reach the team through the contact page or the official community channel whenever you need help."
             className="md:col-span-2"
           />
         </div>
@@ -180,7 +177,7 @@ export function FeatureBento() {
           <div className="flex items-center gap-2.5">
             <Activity className="h-4 w-4 text-amber-400" />
             <p className="font-body text-xs text-slate-400">
-              Open the member tool to view authenticated values for your selected table.
+              Open the member area to view the live values available for your selected table.
             </p>
           </div>
           <span className="font-display text-[8px] font-bold uppercase tracking-[0.22em] text-slate-500">

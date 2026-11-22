@@ -148,7 +148,7 @@ const CURATED_FEATURES: Record<string, string[]> = {
   ],
   PLAN_1_YEAR: [
     'Permanent 365-day all-access VIP pass',
-    'All current & experimental algorithms',
+    'All current analysis modes',
     'Ultra-low latency private stream',
     'Direct 1-on-1 founder support desk'
   ]
@@ -526,10 +526,11 @@ export function PlansSection() {
               </div>
               <div>
                 <h4 className="font-display text-xs sm:text-sm font-black text-white uppercase tracking-wider mb-1">
-                  Cryptographic Protocol
+                  Verified Crypto Checkout
                 </h4>
                 <p className="font-body text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                  Cryptographically signed IPN webhook verification with exact integer cents precision. Premium unlocks only after final provider settlement.
+                  Pay with supported cryptocurrencies through a verified checkout. Your plan unlocks only after the
+                  payment has been confirmed and your access is activated.
                 </p>
               </div>
             </div>
@@ -540,10 +541,11 @@ export function PlansSection() {
               </div>
               <div>
                 <h4 className="font-display text-xs sm:text-sm font-black text-white uppercase tracking-wider mb-1">
-                  Calendar-Month Precision
+                  Full-Length Access
                 </h4>
                 <p className="font-body text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                  UTC calendar boundary calculations ensuring true multi-month coverage across leap years and varying month lengths (28, 29, 30, 31 days).
+                  Every plan keeps its advertised access period, including multi-month passes. Your dashboard shows the
+                  exact expiration date and remaining time.
                 </p>
               </div>
             </div>
@@ -554,10 +556,11 @@ export function PlansSection() {
               </div>
               <div>
                 <h4 className="font-display text-xs sm:text-sm font-black text-white uppercase tracking-wider mb-1">
-                  Zero-Custody Architecture
+                  No Betting Custody
                 </h4>
                 <p className="font-body text-[11px] sm:text-xs text-slate-400 leading-relaxed">
-                  Pure statistical intelligence SaaS. No betting deposits or player balance custody. Referral earnings may be withdrawn through the approved payout workflow.
+                  Roulette Accuracy is an intelligence and analysis service. We do not accept betting deposits or hold
+                  player gambling balances. Referral earnings may be withdrawn through the approved payout workflow.
                 </p>
               </div>
             </div>

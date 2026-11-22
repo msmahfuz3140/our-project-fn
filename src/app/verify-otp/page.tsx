@@ -27,17 +27,11 @@ function VerifyOtpContent() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
-  const devCodeParam = searchParams.get('devCode') || '';
-
   useEffect(() => {
     if (targetParam) {
       setTarget(targetParam);
     }
-    if (devCodeParam) {
-      setCode(devCodeParam);
-      setInfoMessage(`Development OTP code: ${devCodeParam} (Auto-filled for testing)`);
-    }
-  }, [targetParam, devCodeParam]);
+  }, [targetParam]);
 
   // Countdown timer for 60s cooldown
   useEffect(() => {
@@ -87,7 +81,7 @@ function VerifyOtpContent() {
 
       setInfoMessage('Verification successful! Redirecting...');
       setTimeout(() => {
-        router.push('/');
+        router.push('/dashboard/tool');
       }, 1200);
     } catch (err: any) {
       setError(err?.message || 'Verification failed. Please check the code and try again.');

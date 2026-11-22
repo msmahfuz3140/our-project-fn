@@ -72,8 +72,8 @@ export function LiveTicker() {
     if (!status.isToolEnabled) {
       return [
         {
-          label: 'ENGINE',
-          text: status.publicStatusMessage || 'The prediction engine is temporarily disabled.'
+          label: 'LOBBY',
+          text: status.publicStatusMessage || 'The live table lobby is temporarily unavailable.'
         }
       ];
     }
@@ -81,20 +81,20 @@ export function LiveTicker() {
     if (!status.dsApiConfigured) {
       return [
         {
-          label: 'API',
-          text: 'Provider API configuration is pending. A Main Admin must save the Public API URL and Server SK Key in API Settings.'
+          label: 'LOBBY',
+          text: 'The live table lobby is coming online. Member access will show the current availability.'
         }
       ];
     }
 
     return [
       {
-        label: 'ENGINE',
-        text: 'Live engine is operational. Open the member dashboard to view authenticated real-time tables.'
+        label: 'LOBBY',
+        text: 'The live table lobby is available. Sign in to view member-protected tables.'
       },
       {
-        label: 'SECURITY',
-        text: 'All provider requests are signed on the server. The SK key is never exposed to browsers.'
+        label: 'ACCESS',
+        text: 'Live values are available only inside the authenticated member dashboard.'
       },
       {
         label: 'STATUS',
@@ -150,7 +150,7 @@ export function LiveTicker() {
           <span className="truncate font-medium text-slate-300">{current.text}</span>
           <span className="ml-auto hidden shrink-0 items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-slate-500 sm:inline-flex">
             <ShieldCheck className="h-3 w-3 text-emerald-500" />
-            Server-signed API
+            Member-protected access
           </span>
         </div>
       </div>

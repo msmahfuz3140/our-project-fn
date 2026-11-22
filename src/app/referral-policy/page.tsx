@@ -50,36 +50,36 @@ export default function ReferralPolicyPage() {
                 The Roulette Accuracy referral system operates under strict role-based authorization:
               </p>
               <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
-                <li><strong className="text-slate-200">Moderator Partners:</strong> Authorized community managers and affiliate creators who have received the <code>MODERATOR</code> role from a Main Admin. They earn a 50% commission on every valid subscription purchased through their referral link.</li>
-                <li><strong className="text-slate-200">Standard Users:</strong> May share invitation links with peers for community growth, but do not receive monetary attribution.</li>
-                <li><strong className="text-slate-200">Main Admins:</strong> Exactly four designated <code>SUPER_ADMIN</code> accounts oversee platform operations and manage Moderator relationships.</li>
+                <li><strong className="text-slate-200">Standard Users:</strong> Receive a unique referral code and earn a one-time commission (30% by default) after their referred member&apos;s first fully verified subscription purchase.</li>
+                <li><strong className="text-slate-200">Moderator Partners:</strong> Authorized community managers and affiliate creators who have received the <code>MODERATOR</code> role from a Main Admin. They earn a lifetime commission (50% by default) on every eligible verified subscription purchase made through their referral code.</li>
+                <li><strong className="text-slate-200">Main Admins:</strong> Designated <code>SUPER_ADMIN</code> accounts oversee platform operations, manage Moderator relationships, and control the global commission policy.</li>
               </ul>
             </section>
 
             <section className="space-y-3">
               <h2 className="font-display text-lg font-bold uppercase text-white tracking-wide">
-                2. Strict Zero-Withdrawal Platform Architecture
+                2. Referral Earnings &amp; Withdrawals
               </h2>
               <p>
-                Roulette Accuracy does not hold user balances or provide automated client withdrawal endpoints. There is no in-app custodial wallet or withdrawal request button. Commission statements and arrangements are managed offline directly between designated Main Admins and verified Moderators.
+                Roulette Accuracy is an intelligence and analysis service and does not accept betting deposits or hold player gambling balances. Approved referral commissions are credited to a platform earnings wallet. Members can request a withdrawal in a supported cryptocurrency and network; the requested amount is reserved and stays <strong className="text-slate-200">Pending</strong> until an administrator reviews it. Approved payouts are sent manually and marked <strong className="text-slate-200">Paid / Completed</strong> with a transaction reference. Rejected requests return the exact reserved amount to the available balance exactly once.
               </p>
             </section>
 
             <section className="space-y-3">
               <h2 className="font-display text-lg font-bold uppercase text-white tracking-wide">
-                3. Attribution Tracking & Order Snapshots
+                3. Attribution Tracking &amp; Order Snapshots
               </h2>
               <p>
-                When a user registers using a Moderator&apos;s referral code (e.g. <code>?ref=MOD_CODE</code>), the relationship is permanently bound in the database upon account verification. When that referred subscriber purchases any subscription tier, the purchase record snapshots the referrer&apos;s ID and records 50% of the plan&apos;s integer cent value.
+                A valid referral code is required at registration. Before any account is created, the backend resolves the code to an active eligible member, rejects invalid or disabled codes, and permanently stores the referrer&apos;s database user ID on the new account. The relationship cannot be changed later. When the referred member makes an eligible verified purchase, the purchase record snapshots the applicable referrer, commission type, rate and commissionable amount. Integer-cent arithmetic is used for all commission and wallet calculations.
               </p>
             </section>
 
             <section className="space-y-3">
               <h2 className="font-display text-lg font-bold uppercase text-white tracking-wide">
-                4. Prohibited Practices & Self-Referral
+                4. Prohibited Practices &amp; Self-Referral
               </h2>
               <p>
-                Moderators are strictly prohibited from creating duplicate accounts to refer themselves. Any attempts to manipulate referral attribution, deploy automated bot clicks, or misrepresent the platform through false claims of guaranteed gambling winnings will result in immediate role revocation and account termination.
+                Members and Moderators are strictly prohibited from creating duplicate accounts to refer themselves, using another person&apos;s contact details without consent, or attempting to manipulate referral attribution. Self-referral by email alias or phone number is rejected and audit-logged. Any attempt to deploy automated bot clicks, abuse withdrawal requests, or misrepresent the platform through false claims of guaranteed gambling winnings may result in role revocation and account termination.
               </p>
             </section>
           </div>

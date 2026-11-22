@@ -134,6 +134,16 @@ export default function AdminAuditLogsPage() {
               <option value="COMMISSION_CONFIG_UPDATE">Commission Rate Changes</option>
               <option value="DUAL_APPROVAL_REQUEST">Dual Approval Requests</option>
               <option value="DUAL_APPROVAL_CONFIRM">Dual Approval Confirmations</option>
+              <option value="ADMIN_2FA_SETUP_STARTED">Admin 2FA Setup Started</option>
+              <option value="ADMIN_2FA_ENABLED">Admin 2FA Enabled</option>
+              <option value="ADMIN_2FA_LOGIN_SUCCESS">Admin 2FA Login Success</option>
+              <option value="ADMIN_2FA_FAILED">Admin 2FA Failed Attempts</option>
+              <option value="ADMIN_2FA_RECOVERY_CODE_USED">Admin Recovery Code Used</option>
+              <option value="ADMIN_2FA_RECOVERY_CODES_REGENERATED">Admin Recovery Codes Regenerated</option>
+              <option value="ADMIN_2FA_DEVICE_REPLACED">Admin Authenticator Replaced</option>
+              <option value="ADMIN_2FA_DISABLED">Admin 2FA Disabled</option>
+              <option value="ADMIN_2FA_RESET">Admin 2FA Reset</option>
+              <option value="ADMIN_2FA_OWNER_RECOVERY">Owner Recovery Actions</option>
             </select>
           </div>
 

@@ -24,6 +24,7 @@ interface AuthContextType {
   login: (input: LoginInput) => Promise<AuthResponse>;
   register: (input: RegisterInput) => Promise<AuthResponse>;
   verifyOtp: (input: VerifyOtpInput) => Promise<AuthResponse>;
+  completeAdminTwoFactor: (response: AuthResponse) => Promise<void>;
   resendOtp: (input: ResendOtpInput) => Promise<{ success: boolean; cooldownSeconds: number }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -67,6 +68,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (input: LoginInput): Promise<AuthResponse> => {
     const res = await authClient.login(input);
+
+    // Admin password verification is only the first factor. Do not establish
+    // a client session until the TOTP challenge has been completed.
+    if (res.requiresAdmin2FA) {
+      setUser(null);
+      setToken(null);
+      return res;
+    }
+
     // A fresh login should show the mandatory disclaimer exactly once again.
     resetDisclaimerAcknowledgement(res.user.id);
     markDisclaimerPendingAfterLogin();
@@ -81,16 +91,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Keep the sanitised login user if the follow-up read is unavailable.
     }
     setUser(hydratedUser);
-    setToken(res.token);
+    setToken(res.token || null);
     return { ...res, user: hydratedUser };
+  };
+
+  const completeAdminTwoFactor = async (res: AuthResponse): Promise<void> => {
+    resetDisclaimerAcknowledgement(res.user.id);
+    markDisclaimerPendingAfterLogin();
+    setUser(res.user);
+    setToken(res.token || 'cookie-session');
+    try {
+      const hydrated = await authClient.getMe();
+      markSessionActive();
+      setUser(hydrated);
+    } catch {
+      // The signed-in response is still sufficient for the current page.
+    }
   };
 
   const register = async (input: RegisterInput): Promise<AuthResponse> => {
     const res = await authClient.register(input);
-    resetDisclaimerAcknowledgement(res.user.id);
-    markDisclaimerPendingAfterLogin();
-    setUser(res.user);
-    setToken(res.token);
+    if (res.token) {
+      resetDisclaimerAcknowledgement(res.user.id);
+      markDisclaimerPendingAfterLogin();
+      setUser(res.user);
+      setToken(res.token);
+    }
     return res;
   };
 
@@ -99,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetDisclaimerAcknowledgement(res.user.id);
     markDisclaimerPendingAfterLogin();
     setUser(res.user);
-    setToken(res.token);
+    setToken(res.token || null);
     return res;
   };
 
@@ -121,10 +147,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         isLoading,
-        isAuthenticated: !!user && (user.isEmailVerified || user.isPhoneVerified || user.isActive !== false),
+        isAuthenticated: !!user && user.isActive !== false && (user.isEmailVerified || user.isPhoneVerified),
         login,
         register,
         verifyOtp,
+        completeAdminTwoFactor,
         resendOtp,
         logout,
         refreshUser

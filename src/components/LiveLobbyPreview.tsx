@@ -2,15 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  Activity,
-  ArrowRight,
-  BarChart3,
-  Lock,
-  Radio,
-  ShieldCheck,
-  Sparkles
-} from 'lucide-react';
+import { Activity, ArrowRight, BarChart3, LayoutDashboard, Lock, Radio, ShieldCheck, Sparkles, Table2 } from 'lucide-react';
 import { authClient } from '../lib/auth-client';
 
 interface PublicToolStatus {
@@ -18,16 +10,11 @@ interface PublicToolStatus {
   maintenanceMode?: boolean;
   publicStatusMessage?: string;
   dsApiConfigured?: boolean;
-  toolVersion?: string;
 }
 
 /**
- * Public lobby preview.
- *
- * The previous version displayed hardcoded table names, spins and "HOT" flags
- * as if they were live. Real table rows are subscription-protected, so this
- * section now shows the actual public engine status and what is available after
- * authentication instead of fabricated casino data.
+ * Public lobby preview. It reports only member-facing availability; internal
+ * provider configuration, credentials and server architecture are never shown.
  */
 export function LiveLobbyPreview() {
   const [status, setStatus] = useState<PublicToolStatus | null>(null);
@@ -68,16 +55,15 @@ export function LiveLobbyPreview() {
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 backdrop-blur-md">
               <span className={`h-1.5 w-1.5 rounded-full ${operational ? 'animate-ping bg-emerald-400' : 'bg-amber-400'}`} />
               <span className="font-display text-[10px] font-bold uppercase tracking-widest text-amber-400">
-                AUTHENTICATED LIVE TABLE LOBBY
+                MEMBER LIVE TABLE LOBBY
               </span>
             </div>
             <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-white sm:text-4xl">
               Live European Roulette Tables
             </h2>
             <p className="mt-2 max-w-2xl font-body text-sm text-slate-400 sm:text-base">
-              Real table rows, spins, predictions and travel charts are available
-              inside the member dashboard. Public pages never display fabricated
-              live spins or fake win rates.
+              Member access includes the live table lobby, wheel view, travel chart and spin history. Public pages never
+              display fabricated live spins or fake win rates.
             </p>
           </div>
 
@@ -87,49 +73,46 @@ export function LiveLobbyPreview() {
               {error
                 ? 'Status temporarily unavailable'
                 : status?.maintenanceMode
-                  ? 'Maintenance mode active'
-                  : status?.dsApiConfigured
-                    ? 'Provider API configured'
-                    : 'Provider API pending'}
+                  ? 'Scheduled maintenance'
+                  : operational
+                    ? 'Live lobby available'
+                    : 'Live lobby scheduled'}
             </span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <StatusCard
-            icon={<Radio className="h-4 w-4 text-emerald-400" />}
-            label="Live engine"
+            icon={<Table2 className="h-4 w-4 text-emerald-400" />}
+            label="Live table lobby"
             value={
               error
                 ? 'Unknown'
                 : status?.maintenanceMode
                   ? 'Maintenance'
                   : status?.isToolEnabled === false
-                    ? 'Disabled'
+                    ? 'Unavailable'
                     : operational
-                      ? 'Operational'
-                      : 'Configuration pending'
+                      ? 'Available'
+                      : 'Coming online'
             }
-            detail={
-              status?.publicStatusMessage ||
-              'The public status endpoint reports the real operational state.'
-            }
+            detail={status?.publicStatusMessage || 'Check the member dashboard for the current table availability.'}
             color={operational ? 'emerald' : 'amber'}
           />
 
           <StatusCard
             icon={<Activity className="h-4 w-4 text-amber-400" />}
-            label="Prediction engine"
-            value="Dealer Signature"
-            detail="Direction-aware travel average, n9 main sector, Top Over n4 and Top Under n4, calculated deterministically from live API data."
+            label="Table analysis"
+            value="Wheel · Travel · Graph"
+            detail="Follow table activity through synchronized views designed for quick, at-a-glance reading."
             color="amber"
           />
 
           <StatusCard
             icon={<ShieldCheck className="h-4 w-4 text-sky-400" />}
-            label="Secure connection"
-            value="Server-side HMAC"
-            detail="The Main Server SK Key is encrypted at rest and signed only by the backend proxy. It never enters browser JavaScript or localStorage."
+            label="Member access"
+            value="Protected"
+            detail="Live table values are available only to signed-in members with an active access plan."
             color="sky"
           />
         </div>
@@ -141,13 +124,11 @@ export function LiveLobbyPreview() {
             </div>
             <div>
               <h3 className="font-display text-sm font-bold uppercase tracking-wider text-white">
-                Live table rows are subscriber-protected
+                Live table data is member-protected
               </h3>
               <p className="mt-1 max-w-2xl font-body text-xs leading-relaxed text-slate-400">
-                Sign in with an active plan to load real tables from the provider
-                API, including the Wheel / Prediction Map, live W/L history,
-                Pattern Guide, and Live Graph. If the API feed is stale, the last valid data is retained
-                and clearly marked — nothing is invented.
+                Sign in with an active plan to open the live lobby, wheel view, travel chart, history and pattern views.
+                If live values are temporarily delayed, the last valid data is kept and clearly marked.
               </p>
             </div>
           </div>
@@ -163,9 +144,9 @@ export function LiveLobbyPreview() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <MiniFeature icon={<BarChart3 className="h-3.5 w-3.5" />} text="Travel chart · last 60 jumps" />
-          <MiniFeature icon={<Activity className="h-3.5 w-3.5" />} text="W/L n9 + n4 · latest 40 results" />
-          <MiniFeature icon={<Radio className="h-3.5 w-3.5" />} text="Auto-refresh · no page reload" />
+          <MiniFeature icon={<BarChart3 className="h-3.5 w-3.5" />} text="Travel chart · recent jumps" />
+          <MiniFeature icon={<Activity className="h-3.5 w-3.5" />} text="Result history · latest spins" />
+          <MiniFeature icon={<LayoutDashboard className="h-3.5 w-3.5" />} text="Auto-refresh · no page reload" />
         </div>
       </div>
     </section>

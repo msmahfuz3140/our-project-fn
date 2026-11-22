@@ -1,44 +1,44 @@
 import React from 'react';
-import { ArrowLeftRight, BarChart3, Cpu, ShieldCheck, Sparkles } from 'lucide-react';
+import { Activity, CreditCard, LayoutDashboard, Sparkles, Table2 } from 'lucide-react';
 
 /**
- * Capability strip. Replaces previously unverifiable uptime/prediction-count
- * marketing figures with facts that are true for the shipped engine.
+ * Public capability strip. It intentionally contains no internal architecture
+ * or operational claims that depend on hidden implementation details.
  */
 export function StatsBar() {
   const stats = [
     {
-      icon: <Cpu className="h-5 w-5" />,
-      label: 'Prediction engine',
-      value: 'Dealer Signature',
-      sub: 'Deterministic travel math',
+      icon: <Table2 className="h-5 w-5" />,
+      label: 'Live lobby',
+      value: '20+ tables',
+      sub: 'Evolution & Pragmatic',
       accent: 'text-amber-300',
       iconBg: 'bg-amber-500/10 border-amber-500/20',
       bar: 'from-amber-400 to-orange-500'
     },
     {
-      icon: <ArrowLeftRight className="h-5 w-5" />,
-      label: 'Directions',
-      value: 'CW · CCW',
-      sub: 'Independent calculations',
+      icon: <Activity className="h-5 w-5" />,
+      label: 'Analysis views',
+      value: 'Wheel · Travel · Graph',
+      sub: 'One synchronized workspace',
       accent: 'text-emerald-300',
       iconBg: 'bg-emerald-500/10 border-emerald-500/20',
       bar: 'from-emerald-400 to-teal-500'
     },
     {
-      icon: <BarChart3 className="h-5 w-5" />,
-      label: 'Analysis views',
-      value: 'Wheel · Travel · Live',
-      sub: 'One synchronized response',
+      icon: <CreditCard className="h-5 w-5" />,
+      label: 'Crypto checkout',
+      value: 'Supported networks',
+      sub: 'Clear plan activation',
       accent: 'text-sky-300',
       iconBg: 'bg-sky-500/10 border-sky-500/20',
       bar: 'from-sky-400 to-indigo-500'
     },
     {
-      icon: <ShieldCheck className="h-5 w-5" />,
-      label: 'Key security',
-      value: 'Server-side HMAC',
-      sub: 'Encrypted at rest',
+      icon: <LayoutDashboard className="h-5 w-5" />,
+      label: 'Member area',
+      value: 'Dashboard · Wallet',
+      sub: 'Account in one place',
       accent: 'text-teal-300',
       iconBg: 'bg-teal-500/10 border-teal-500/20',
       bar: 'from-teal-400 to-emerald-500'
@@ -85,9 +85,9 @@ export function StatsBar() {
           No fabricated live values
         </span>
         <span className="hidden h-3 w-px bg-white/10 sm:block" />
-        <span>Authenticated provider feed</span>
+        <span>Member-protected live tables</span>
         <span className="hidden h-3 w-px bg-white/10 sm:block" />
-        <span>Subscriber-protected tables</span>
+        <span>Secure account access</span>
       </div>
     </section>
   );

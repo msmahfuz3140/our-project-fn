@@ -1,39 +1,39 @@
 import React from 'react';
-import { Layers, Radio, Cpu, Award, ArrowRight } from 'lucide-react';
+import { UserPlus, MailCheck, CreditCard, LayoutDashboard, ArrowRight } from 'lucide-react';
 
 export function HowItWorks() {
   const steps = [
     {
       num: '01',
-      icon: <Layers className="h-5 w-5" />,
+      icon: <UserPlus className="h-5 w-5" />,
       tint: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
       line: 'from-amber-400/70',
-      title: 'Select strategy',
-      desc: 'Pick between Offset Pocket Calculation, Target Streak Pattern, or Dealer Signature Trajectory.'
+      title: 'Create your account',
+      desc: 'Register with your email and a referral code from an existing member.'
     },
     {
       num: '02',
-      icon: <Radio className="h-5 w-5" />,
+      icon: <MailCheck className="h-5 w-5" />,
       tint: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
       line: 'from-emerald-400/70',
-      title: 'Monitor live table',
-      desc: 'Connect to any of the 20+ tracked Evolution Gaming and Pragmatic Play tables in the live lobby.'
+      title: 'Verify your email',
+      desc: 'Enter the one-time code we send you to activate your account securely.'
     },
     {
       num: '03',
-      icon: <Cpu className="h-5 w-5" />,
+      icon: <CreditCard className="h-5 w-5" />,
       tint: 'border-rose-500/25 bg-rose-500/10 text-rose-300',
       line: 'from-rose-400/70',
-      title: 'Receive predictions',
-      desc: 'Get immediate sector placements with neighbor ranges (e.g. 25n1, 0n4) and confirmed spin metrics.'
+      title: 'Choose your pass',
+      desc: 'Pick the access period that fits you and complete checkout with a supported cryptocurrency.'
     },
     {
       num: '04',
-      icon: <Award className="h-5 w-5" />,
+      icon: <LayoutDashboard className="h-5 w-5" />,
       tint: 'border-sky-500/25 bg-sky-500/10 text-sky-300',
       line: 'from-sky-400/70',
-      title: 'Execute with edge',
-      desc: 'Follow the mathematical edge, observe momentum changes, and stop whenever weakening signals fire.'
+      title: 'Open your dashboard',
+      desc: 'Use the live table lobby, visual analysis and wallet tools from one member workspace.'
     }
   ];
 
@@ -46,14 +46,14 @@ export function HowItWorks() {
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 backdrop-blur-md">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-live-pulse" />
             <span className="font-display text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400">
-              Four-step workflow
+              Getting started
             </span>
           </div>
           <h2 className="font-display text-3xl font-black uppercase leading-tight tracking-tight text-white sm:text-4xl">
-            How the engine <span className="text-gold-shimmer">operates</span>
+            From sign-up to <span className="text-gold-shimmer">your dashboard</span>
           </h2>
           <p className="mx-auto mt-4 max-w-lg font-body text-sm leading-relaxed text-slate-400 sm:text-base">
-            No guesswork. A structured systematic methodology powered by live spin telemetry.
+            Four simple steps. No need to learn any technical setup before you begin.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export function HowItWorks() {
               </p>
 
               <div className="mt-5 flex items-center gap-1.5 font-display text-[8px] font-bold uppercase tracking-[0.18em] text-slate-600 transition-colors group-hover:text-amber-400/80">
-                <span>Calibrated</span>
+                <span>Get started</span>
                 <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
               </div>
 

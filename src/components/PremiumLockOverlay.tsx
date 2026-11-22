@@ -118,7 +118,7 @@ export function PremiumLockOverlay({
     ? accessStatus?.reason || 'Your subscription access was revoked by platform administration. Please contact our support team.'
     : isExpired
     ? `Your premium subscription ended on ${accessStatus?.expiresAtFormatted || 'recently'}. Renew today to immediately restore live telemetry and AI consensus tracking.`
-    : 'The European Roulette prediction engine, dealer signature tracker, and real-time walk-forward algorithm are exclusively accessible to verified premium subscribers.';
+    : 'The European Roulette analysis workspace, dealer rhythm tracker and live member tools are exclusively accessible to verified premium subscribers.';
 
   return (
     <div className="relative min-h-[calc(100vh-65px)] w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-hidden bg-[#05080f]">
@@ -381,7 +381,7 @@ export function PremiumLockOverlay({
 
         {/* Strict Security Notice */}
         <p className="mt-6 text-center font-display text-[10px] uppercase tracking-widest text-slate-500">
-          Cryptographically Signed • Server-Side Subscription Verification • Zero Simulated Fallbacks
+          Secure Checkout • Verified Account Access • Member-Protected Tools
         </p>
       </motion.div>
     </div>

@@ -25,6 +25,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         router.push('/golin?redirect=/heda');
       } else if (user?.role !== UserRole.SUPER_ADMIN) {
         router.push('/dashboard');
+      } else if (user?.adminTwoFactorVerified !== true) {
+        router.push('/golin?redirect=/heda&admin2fa=required');
       }
     }
   }, [isLoading, isAuthenticated, user, router]);

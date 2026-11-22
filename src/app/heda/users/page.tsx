@@ -1691,6 +1691,18 @@ export default function AdminUsersPage() {
                     <span className="text-slate-500">
                       Pending withdrawal requests: {(detailedUser.withdrawals || []).filter((w: any) => ['PENDING', 'APPROVED'].includes(w.status)).length}
                     </span>
+                    <span
+                      className={`ml-auto rounded-full border px-2 py-0.5 font-bold uppercase tracking-wider ${
+                        detailedUser.adminTwoFactor?.enabled
+                          ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
+                          : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                      }`}
+                    >
+                      Admin 2FA: {detailedUser.adminTwoFactor?.enabled ? 'Enabled' : 'Setup Required'}
+                      {detailedUser.adminTwoFactor?.enabled
+                        ? ` · ${detailedUser.adminTwoFactor?.recoveryCodesRemaining || 0} recovery codes`
+                        : ''}
+                    </span>
                   </div>
                 </div>
 

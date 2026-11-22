@@ -62,11 +62,11 @@ export function Hero() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                 </span>
                 <span className="font-display text-[9px] font-black uppercase tracking-[0.18em] text-emerald-300 sm:text-[10px]">
-                  Precision engine v2.4
+                  Live roulette workspace
                 </span>
                 <span className="hidden h-3 w-px bg-white/15 sm:block" />
                 <span className="font-display text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 sm:text-[10px]">
-                  37-pocket mapping
+                  European roulette
                 </span>
               </div>
 
@@ -124,13 +124,13 @@ export function Hero() {
 
               {/* Quick facts */}
               <div className="animate-rise delay-4 mx-auto mt-9 grid max-w-lg grid-cols-3 gap-2.5 lg:mx-0">
-                <QuickFact icon={<Target className="h-3.5 w-3.5" />} value="37" label="Pockets mapped" />
-                <QuickFact icon={<Radar className="h-3.5 w-3.5" />} value="CW · CCW" label="Independent" />
-                <QuickFact icon={<ShieldCheck className="h-3.5 w-3.5" />} value="HMAC" label="Server-signed" />
+                <QuickFact icon={<Target className="h-3.5 w-3.5" />} value="37" label="Pockets covered" />
+                <QuickFact icon={<Radar className="h-3.5 w-3.5" />} value="CW · CCW" label="Both directions" />
+                <QuickFact icon={<ShieldCheck className="h-3.5 w-3.5" />} value="Verified" label="Email accounts" />
               </div>
 
               <div className="animate-rise delay-5 mt-6 flex flex-wrap items-center justify-center gap-2.5 lg:justify-start">
-                <TrustChip icon={<Zap className="h-3.5 w-3.5 text-amber-400" />} text="Instant activation" />
+                <TrustChip icon={<Zap className="h-3.5 w-3.5 text-amber-400" />} text="Email-verified access" />
                 <TrustChip icon={<Activity className="h-3.5 w-3.5 text-emerald-400" />} text="20+ live tables" />
                 <TrustChip icon={<Gauge className="h-3.5 w-3.5 text-sky-400" />} text="Wheel · Travel · Live graph" />
               </div>
@@ -146,7 +146,7 @@ export function Hero() {
                   </span>
                   <div className="text-left">
                     <p className="font-display text-[8px] uppercase tracking-widest text-slate-500">Sector map</p>
-                    <p className="font-display text-[11px] font-black text-white">n9 · OVER · UNDER</p>
+                    <p className="font-display text-[11px] font-black text-white">Wheel insights</p>
                   </div>
                 </div>
 
@@ -168,20 +168,20 @@ export function Hero() {
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
                       </span>
                       <span className="font-display text-[10px] font-black uppercase tracking-[0.18em] text-white sm:text-xs">
-                        Precision pipeline
+                        Member workspace preview
                       </span>
                     </div>
                     <span className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 font-display text-[8px] font-black uppercase tracking-[0.16em] text-emerald-300 sm:text-[9px]">
-                      Server-side
+                      Members only
                     </span>
                   </div>
 
                   <AccuracyWheel className="mx-auto w-full max-w-[350px]" />
 
                   <div className="mt-5 grid grid-cols-3 gap-2">
-                    <PipelineChip label="Travel math" value="Deterministic" />
-                    <PipelineChip label="Main sector" value="n9 pocket" />
-                    <PipelineChip label="Top ranges" value="n4 over/under" />
+                    <PipelineChip label="Live lobby" value="20+ tables" />
+                    <PipelineChip label="Analysis" value="Wheel & charts" />
+                    <PipelineChip label="Account" value="Dashboard" />
                   </div>
 
                   <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-3">

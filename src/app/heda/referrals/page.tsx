@@ -903,6 +903,11 @@ export default function AdminReferralsPage() {
                         <td className="py-3 px-3 text-slate-300">
                           {c.moderatorId?.name || 'Referrer'}
                           <span className="block text-[10px] text-slate-500">{c.moderatorId?.email}</span>
+                          {c.walletTransactionId && (
+                            <span className="block font-mono text-[8px] text-sky-400/80" title="Wallet transaction credited">
+                              WLT: {String(c.walletTransactionId).slice(-10)}
+                            </span>
+                          )}
                           <span
                             className={`mt-1 inline-flex rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase ${
                               c.commissionType === 'ONE_TIME'

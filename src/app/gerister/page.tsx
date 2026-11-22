@@ -66,6 +66,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!referralCode.trim()) {
+      setError('Please enter a valid referral code.');
+      return;
+    }
+
     if (!turnstileToken) {
       setError('Please complete the security CAPTCHA verification');
       return;
@@ -74,16 +79,17 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register({
+      const result = await register({
         name: name.trim() || 'Member',
         email: email.trim().toLowerCase(),
         password,
-        referralCode: referralCode.trim() || undefined,
+        referralCode: referralCode.trim().toUpperCase(),
         turnstileToken
       });
 
-      // Immediate redirect to dashboard/tool - no OTP or verification step needed!
-      router.push('/dashboard/tool');
+      // Account is created but inactive until the emailed OTP is verified.
+      const target = result?.verificationTarget || email.trim().toLowerCase();
+      router.push(`/verify-otp?target=${encodeURIComponent(target)}&purpose=REGISTRATION`);
     } catch (err: any) {
       setError(err?.message || 'Registration failed. Please check your information and try again.');
       turnstileRef.current?.reset();
@@ -122,7 +128,7 @@ export default function RegisterPage() {
           Create Member Account
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          Enter your email and password to instantly create your account
+          Create your account with a referral code and verify your email to get started
         </p>
       </div>
 
@@ -172,7 +178,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block font-display text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-              Password <span className="text-[10px] text-slate-500 font-normal">(min 6 characters)</span>
+              Password <span className="text-[10px] text-slate-500 font-normal">(min 8 characters)</span>
             </label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -213,7 +219,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block font-display text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-              Referral Code <span className="text-[10px] text-slate-500 font-normal">(Optional)</span>
+              Referral Code <span className="text-[10px] text-rose-400 font-normal">(Required)</span>
             </label>
             <div className="relative">
               <Gift className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -221,10 +227,15 @@ export default function RegisterPage() {
                 type="text"
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                placeholder="REFERRAL CODE"
+                placeholder="ENTER REFERRAL CODE"
                 className="w-full rounded-lg border border-white/10 bg-black/40 pl-10 pr-4 py-2.5 text-sm uppercase text-white placeholder-slate-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
+                required
+                minLength={3}
               />
             </div>
+            <p className="mt-1 text-[10px] text-slate-500">
+              A valid referral code from an existing member is required to register.
+            </p>
           </div>
 
           {/* Cloudflare Turnstile CAPTCHA */}
@@ -246,7 +257,7 @@ export default function RegisterPage() {
             ) : (
               <>
                 <Sparkles className="h-4 w-4 fill-black" />
-                Create Account &amp; Access Platform
+                Create Account &amp; Verify Email
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -264,7 +275,7 @@ export default function RegisterPage() {
 
         <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-slate-500">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-          <span>Instant activation • Direct access to intelligence platform</span>
+          <span>Email verification required • Referral code mandatory</span>
         </div>
       </div>
     </div>
