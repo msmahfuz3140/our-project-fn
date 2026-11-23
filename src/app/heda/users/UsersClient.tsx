@@ -18,6 +18,7 @@ import {
   Eye,
   Sliders,
   AlertTriangle,
+  AlertCircle,
   RefreshCw,
   X,
   CreditCard,
@@ -409,8 +410,14 @@ export default function AdminUsersPage() {
     setStaffName('');
     setStaffEmail('');
     setStaffPhone('');
-    setStaffPassword('');
-    setStaffShowPassword(false);
+    // Auto-generate strong secure password by default so field is never blank
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    let defaultPwd = '';
+    for (let i = 0; i < 12; i++) {
+      defaultPwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setStaffPassword(defaultPwd);
+    setStaffShowPassword(true);
     setStaffCommissionRate(defaultRole === 'MODERATOR' ? 50 : 10);
     setStaffPlanId('none');
     setStaffNotes('');
@@ -449,10 +456,14 @@ export default function AdminUsersPage() {
       setActionError('Password must be at least 6 characters long.');
       return;
     }
-    if (!staffReason.trim()) {
-      setActionError('Mandatory administrative reason is required for audit logs.');
-      return;
-    }
+
+    const defaultAuditReason =
+      staffRole === 'SUPER_ADMIN'
+        ? 'Direct Administrator provisioning via User Management'
+        : staffRole === 'MODERATOR'
+        ? 'Direct Moderator provisioning via User Management'
+        : 'Direct Member account provisioning via User Management';
+    const effectiveReason = staffReason.trim() || defaultAuditReason;
 
     setIsSubmitting(true);
     setActionError('');
@@ -465,7 +476,7 @@ export default function AdminUsersPage() {
         role: staffRole,
         commissionRate: staffRole === 'MODERATOR' ? staffCommissionRate : undefined,
         notes: staffNotes.trim() || undefined,
-        reason: staffReason.trim(),
+        reason: effectiveReason,
         planId: staffRole === 'USER' && staffPlanId !== 'none' ? staffPlanId : undefined
       });
 
@@ -486,7 +497,7 @@ export default function AdminUsersPage() {
         await fetchUsers(true);
       }
     } catch (err: any) {
-      setActionError(err.message || 'Failed to create account');
+      setActionError(err.message || 'Failed to create account. Please verify input fields and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -2618,6 +2629,24 @@ export default function AdminUsersPage() {
             </div>
 
             <form onSubmit={handleCreateStaff} className="space-y-4">
+              {/* In-Modal Error Alert */}
+              {actionError && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-rose-500/40 bg-rose-500/15 p-3.5 text-xs text-rose-300 animate-fade-in">
+                  <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-rose-200">Account Creation Failed</p>
+                    <p className="mt-0.5 text-rose-300/90 leading-relaxed">{actionError}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActionError('')}
+                    className="text-rose-400 hover:text-white"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Role Toggle Selector - 3 Roles: User, Admin, Moderator */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
@@ -2750,14 +2779,39 @@ export default function AdminUsersPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
                     Login Password *
                   </label>
-                  <button
-                    type="button"
-                    onClick={generateStaffPassword}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-colors"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    <span>Generate Strong</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {staffPassword && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(staffPassword);
+                          setCopiedPassword(true);
+                          setTimeout(() => setCopiedPassword(false), 2000);
+                        }}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-white transition-colors"
+                      >
+                        {copiedPassword ? (
+                          <>
+                            <Check className="h-3 w-3 text-emerald-400" />
+                            <span className="text-emerald-400">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={generateStaffPassword}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      <span>Generate Strong</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="relative">
                   <input
@@ -2818,17 +2872,16 @@ export default function AdminUsersPage() {
                 />
               </div>
 
-              {/* Mandatory Reason */}
+              {/* Audit Reason */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-amber-400 mb-1">
-                  Audit Log Justification *
+                  Audit Log Justification <span className="text-slate-500 font-normal">(Default provided)</span>
                 </label>
                 <input
                   type="text"
-                  required
                   value={staffReason}
                   onChange={(e) => setStaffReason(e.target.value)}
-                  placeholder="Administrative reason for account creation..."
+                  placeholder="e.g. Direct account creation by platform administrator"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>

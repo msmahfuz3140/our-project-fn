@@ -896,10 +896,20 @@ export const authClient = {
     reason?: string;
     planId?: string;
   }): Promise<any> {
-    return request<any>('/admin/users/create-staff', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
+    try {
+      return await request<any>('/admin/users/create-staff', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    } catch (err: any) {
+      if (err?.status === 404) {
+        return await request<any>('/admin/users', {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
+      }
+      throw err;
+    }
   },
 
   async createAdminModerator(data: { name: string; email: string; phone?: string; password: string; commissionRate?: number; notes?: string }): Promise<any> {
