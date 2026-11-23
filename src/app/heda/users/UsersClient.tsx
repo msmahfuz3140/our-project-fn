@@ -54,7 +54,7 @@ interface UserItem {
   statusReason?: string;
   suspendedUntil?: string;
   referralCode?: string;
-  referredBy?: string;
+  referredBy?: any;
   moderatorCommissionRate?: number;
   createdAt: string;
   orderCount: number;
@@ -144,32 +144,53 @@ export default function AdminUsersPage() {
     setPage(1);
 
     if (syncUrl && typeof window !== 'undefined') {
-      const nextUrl = key === 'all' ? '/heda/users' : `/heda/users#${key}`;
+      let query = '';
+      if (key === 'admins') query = '?role=SUPER_ADMIN';
+      else if (key === 'moderators') query = '?role=MODERATOR';
+      else if (key === 'premium') query = '?sub=ACTIVE';
+      else if (key === 'expired') query = '?sub=EXPIRED';
+      else if (key === 'inactive') query = '?sub=INACTIVE';
+      else if (key === 'suspended') query = '?status=SUSPENDED';
+      else if (key === 'blocked') query = '?status=BLOCKED';
+
+      const nextUrl = query ? `/heda/users${query}` : '/heda/users';
       window.history.replaceState(null, '', nextUrl);
     }
   }, []);
 
-  // Sync with hash-based sidebar filters and legacy query parameters.
+  // Sync with query parameters and hash-based filters
   useEffect(() => {
     const applyFromLocation = () => {
+      const statusParam = searchParams?.get('status') || '';
+      const subParam = searchParams?.get('sub') || '';
+      const roleParam = searchParams?.get('role') || '';
+
+      // If query parameters are present, prioritize them
+      if (statusParam || subParam || roleParam) {
+        setStatusFilter(statusParam);
+        setSubFilter(
+          subParam === 'ACTIVE' || subParam === 'true'
+            ? 'ACTIVE'
+            : subParam === 'INACTIVE' || subParam === 'false'
+              ? 'INACTIVE'
+              : subParam
+        );
+        setRoleFilter(roleParam);
+        setPage(1);
+        return;
+      }
+
+      // Fallback to hash filter if present
       const hashFilter = readHashFilter();
       if (hashFilter) {
         applyUserFilter(hashFilter, false);
         return;
       }
 
-      const statusParam = searchParams.get('status') || '';
-      const subParam = searchParams.get('sub') || '';
-      const roleParam = searchParams.get('role') || '';
-      setStatusFilter(statusParam);
-      setSubFilter(
-        subParam === 'ACTIVE' || subParam === 'true'
-          ? 'ACTIVE'
-          : subParam === 'INACTIVE' || subParam === 'false'
-            ? 'INACTIVE'
-            : subParam
-      );
-      setRoleFilter(roleParam);
+      // Default all
+      setStatusFilter('');
+      setSubFilter('');
+      setRoleFilter('');
       setPage(1);
     };
 
@@ -1095,7 +1116,8 @@ export default function AdminUsersPage() {
                   </td>
                 </tr>
               ) : (
-                users.map((u) => {
+                users.map((u, index) => {
+                  const uid = resolveUserId(u) || u.id || u._id || '';
                   const isBlocked = u.accountStatus === 'BLOCKED';
                   const isSuspended = u.accountStatus === 'SUSPENDED';
                   const isDeleted = u.accountStatus === 'DELETED' || u.isDeleted;
@@ -1103,7 +1125,7 @@ export default function AdminUsersPage() {
 
                   return (
                     <tr
-                      key={u.id}
+                      key={uid || `${u.email || 'user'}-${index}`}
                       className={`hover:bg-slate-800/30 transition-colors ${
                         isDeleted ? 'opacity-50 bg-rose-950/10' : ''
                       }`}
@@ -1121,7 +1143,7 @@ export default function AdminUsersPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-semibold text-white group-hover:text-amber-400 transition-colors underline-offset-2 group-hover:underline">
-                                {u.name}
+                                {u.name || 'Anonymous User'}
                               </span>
                               <span
                                 className={`rounded px-1.5 py-0.2 text-[9px] font-bold uppercase ${
@@ -1136,7 +1158,7 @@ export default function AdminUsersPage() {
                               </span>
                             </div>
                             <div className="text-[11px] font-mono text-slate-500 flex items-center gap-2">
-                              <span>ID: {u.id.substring(0, 10)}...</span>
+                              <span>ID: {uid ? `${uid.substring(0, 10)}...` : '—'}</span>
                               <span className="text-[10px] text-amber-400/80 opacity-0 group-hover:opacity-100 transition-opacity">
                                 🔍 View profile
                               </span>
@@ -1171,7 +1193,7 @@ export default function AdminUsersPage() {
                             </div>
                           )}
                           <div className="text-[10px] text-slate-500">
-                            Reg: {new Date(u.createdAt).toLocaleDateString()}
+                            Reg: {u.createdAt && !isNaN(new Date(u.createdAt).getTime()) ? new Date(u.createdAt).toLocaleDateString() : '—'}
                           </div>
                         </div>
                       </td>
@@ -1217,7 +1239,7 @@ export default function AdminUsersPage() {
                               )}
                             </div>
                             <div className="text-[11px] text-slate-400">
-                              Exp: {new Date(u.activeSubscription!.endDate).toLocaleDateString()}
+                              Exp: {u.activeSubscription?.endDate && !isNaN(new Date(u.activeSubscription.endDate).getTime()) ? new Date(u.activeSubscription.endDate).toLocaleDateString() : '—'}
                             </div>
                             {/* Kotodin Baki Prominent Display */}
                             {u.activeSubscription?.isExpired || (u.activeSubscription?.daysRemaining !== undefined && u.activeSubscription.daysRemaining <= 0) ? (
@@ -1264,7 +1286,12 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-4 text-xs font-mono">
                         <div className="text-slate-300">{u.referralCode || '—'}</div>
                         {u.referredBy && (
-                          <div className="text-[10px] text-slate-500">Ref by: {u.referredBy}</div>
+                          <div className="text-[10px] text-slate-500">
+                            Ref by:{' '}
+                            {typeof u.referredBy === 'object' && u.referredBy !== null
+                              ? (u.referredBy.name || u.referredBy.email || u.referredBy.referralCode || 'Referrer')
+                              : String(u.referredBy)}
+                          </div>
                         )}
                       </td>
 

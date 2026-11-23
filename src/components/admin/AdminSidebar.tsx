@@ -77,12 +77,12 @@ const NAV_SECTIONS: NavSection[] = [
         name: 'User Management',
         icon: Users,
         subItems: [
-          { name: 'All Users', href: '/heda/users#all' },
-          { name: 'All Admins', href: '/heda/users#admins', badge: 'ROOT' },
-          { name: 'All Moderators', href: '/heda/users#moderators', badge: 'MOD' },
-          { name: 'Premium Subscribers', href: '/heda/users#premium', badge: 'VIP' },
-          { name: 'Blocked Accounts', href: '/heda/users#blocked' },
-          { name: 'Suspended Accounts', href: '/heda/users#suspended' }
+          { name: 'All Users', href: '/heda/users' },
+          { name: 'All Admins', href: '/heda/users?role=SUPER_ADMIN', badge: 'ROOT' },
+          { name: 'All Moderators', href: '/heda/users?role=MODERATOR', badge: 'MOD' },
+          { name: 'Premium Subscribers', href: '/heda/users?sub=ACTIVE', badge: 'VIP' },
+          { name: 'Blocked Accounts', href: '/heda/users?status=BLOCKED' },
+          { name: 'Suspended Accounts', href: '/heda/users?status=SUSPENDED' }
         ]
       }
     ]
