@@ -77,12 +77,12 @@ const NAV_SECTIONS: NavSection[] = [
         name: 'User Management',
         icon: Users,
         subItems: [
-          { name: 'All Users', href: '/heda/users' },
-          { name: 'All Admins', href: '/heda/users?role=SUPER_ADMIN', badge: 'ROOT' },
-          { name: 'All Moderators', href: '/heda/users?role=MODERATOR', badge: 'MOD' },
-          { name: 'Premium Subscribers', href: '/heda/users?sub=ACTIVE', badge: 'VIP' },
-          { name: 'Blocked Accounts', href: '/heda/users?status=BLOCKED' },
-          { name: 'Suspended Accounts', href: '/heda/users?status=SUSPENDED' }
+          { name: 'All Users', href: '/heda/users#all' },
+          { name: 'All Admins', href: '/heda/users#admins', badge: 'ROOT' },
+          { name: 'All Moderators', href: '/heda/users#moderators', badge: 'MOD' },
+          { name: 'Premium Subscribers', href: '/heda/users#premium', badge: 'VIP' },
+          { name: 'Blocked Accounts', href: '/heda/users#blocked' },
+          { name: 'Suspended Accounts', href: '/heda/users#suspended' }
         ]
       }
     ]
@@ -211,7 +211,8 @@ export function AdminSidebar({
       section.items.forEach((item) => {
         if (item.subItems) {
           const hasActiveSub = item.subItems.some((sub) => {
-            const [subPath] = sub.href.split('?');
+            const [subPathRaw] = sub.href.split('?');
+            const subPath = subPathRaw.split('#')[0];
             return pathname === subPath;
           });
           if (hasActiveSub) {
@@ -321,7 +322,8 @@ export function AdminSidebar({
                 // Case 2: Nested Submenu Accordion Dropdown
                 const isMenuOpen = !!openMenus[item.name];
                 const hasActiveChild = item.subItems.some((sub) => {
-                  const [subPath] = sub.href.split('?');
+                  const [subPathRaw] = sub.href.split('?');
+                  const subPath = subPathRaw.split('#')[0];
                   return pathname === subPath;
                 });
 
@@ -359,7 +361,8 @@ export function AdminSidebar({
                     {!isCollapsed && isMenuOpen && (
                       <div className="pl-6 pr-1 py-1 space-y-0.5 border-l border-amber-500/20 ml-4 animate-slide-up">
                         {item.subItems.map((sub) => {
-                          const [subPath, subQuery] = sub.href.split('?');
+                          const [subPathRaw, subQuery] = sub.href.split('?');
+                          const subPath = subPathRaw.split('#')[0];
                           const isPathMatch = pathname === subPath;
                           let isExactMatch = false;
 

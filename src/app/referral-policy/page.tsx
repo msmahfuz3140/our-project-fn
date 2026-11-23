@@ -52,7 +52,7 @@ export default function ReferralPolicyPage() {
               <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
                 <li><strong className="text-slate-200">Standard Users:</strong> Receive a unique referral code and earn a one-time commission (30% by default) after their referred member&apos;s first fully verified subscription purchase.</li>
                 <li><strong className="text-slate-200">Moderator Partners:</strong> Authorized community managers and affiliate creators who have received the <code>MODERATOR</code> role from a Main Admin. They earn a lifetime commission (50% by default) on every eligible verified subscription purchase made through their referral code.</li>
-                <li><strong className="text-slate-200">Main Admins:</strong> Designated <code>SUPER_ADMIN</code> accounts oversee platform operations, manage Moderator relationships, and control the global commission policy.</li>
+                <li><strong className="text-slate-200">Main Admins:</strong> Designated <code>SUPER_ADMIN</code> accounts oversee platform operations, manage Moderator relationships, control the global commission policy, and their own active referral codes can also be used at registration.</li>
               </ul>
             </section>
 
