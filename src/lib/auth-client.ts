@@ -890,10 +890,11 @@ export const authClient = {
     email: string;
     phone?: string;
     password: string;
-    role: 'SUPER_ADMIN' | 'MODERATOR';
+    role: 'SUPER_ADMIN' | 'MODERATOR' | 'USER';
     commissionRate?: number;
     notes?: string;
     reason?: string;
+    planId?: string;
   }): Promise<any> {
     return request<any>('/admin/users/create-staff', {
       method: 'POST',

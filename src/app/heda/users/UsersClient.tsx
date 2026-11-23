@@ -236,8 +236,9 @@ export default function AdminUsersPage() {
   const [passwordSaveStatus, setPasswordSaveStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
 
-  // Staff creation states
-  const [staffRole, setStaffRole] = useState<'SUPER_ADMIN' | 'MODERATOR'>('SUPER_ADMIN');
+  // Account creation states (User / Admin / Moderator)
+  const [staffRole, setStaffRole] = useState<'SUPER_ADMIN' | 'MODERATOR' | 'USER'>('USER');
+  const [staffPlanId, setStaffPlanId] = useState<string>('none');
   const [staffName, setStaffName] = useState('');
   const [staffEmail, setStaffEmail] = useState('');
   const [staffPhone, setStaffPhone] = useState('');
@@ -403,7 +404,7 @@ export default function AdminUsersPage() {
     setActionError('');
   };
 
-  const openCreateStaffModal = (defaultRole: 'SUPER_ADMIN' | 'MODERATOR' = 'SUPER_ADMIN') => {
+  const openCreateStaffModal = (defaultRole: 'SUPER_ADMIN' | 'MODERATOR' | 'USER' = 'USER') => {
     setStaffRole(defaultRole);
     setStaffName('');
     setStaffEmail('');
@@ -411,8 +412,15 @@ export default function AdminUsersPage() {
     setStaffPassword('');
     setStaffShowPassword(false);
     setStaffCommissionRate(defaultRole === 'MODERATOR' ? 50 : 10);
+    setStaffPlanId('none');
     setStaffNotes('');
-    setStaffReason(`Direct ${defaultRole === 'SUPER_ADMIN' ? 'Administrator' : 'Moderator'} provisioning via User Management`);
+    setStaffReason(
+      defaultRole === 'SUPER_ADMIN'
+        ? 'Direct Administrator provisioning via User Management'
+        : defaultRole === 'MODERATOR'
+        ? 'Direct Moderator provisioning via User Management'
+        : 'Direct Member account provisioning via User Management'
+    );
     setActionError('');
     setActiveModal('CREATE_STAFF');
   };
@@ -457,20 +465,28 @@ export default function AdminUsersPage() {
         role: staffRole,
         commissionRate: staffRole === 'MODERATOR' ? staffCommissionRate : undefined,
         notes: staffNotes.trim() || undefined,
-        reason: staffReason.trim()
+        reason: staffReason.trim(),
+        planId: staffRole === 'USER' && staffPlanId !== 'none' ? staffPlanId : undefined
       });
 
-      const roleLabel = staffRole === 'SUPER_ADMIN' ? 'Platform Administrator' : 'Moderator Partner';
-      setActionSuccess(`Staff account created successfully: ${staffEmail.trim()} (${roleLabel}) has been saved to MongoDB.`);
+      const roleLabel =
+        staffRole === 'SUPER_ADMIN'
+          ? 'Platform Administrator'
+          : staffRole === 'MODERATOR'
+          ? 'Moderator Partner'
+          : 'VIP Member';
+      setActionSuccess(`Account created successfully: ${staffEmail.trim()} (${roleLabel}) has been saved to MongoDB.`);
       closeModal();
       authClient.clearCache();
-      if (roleFilter !== staffRole && roleFilter !== '') {
-        setRoleFilter(staffRole);
+      if (staffRole === 'SUPER_ADMIN' && roleFilter !== 'SUPER_ADMIN') {
+        setRoleFilter('SUPER_ADMIN');
+      } else if (staffRole === 'MODERATOR' && roleFilter !== 'MODERATOR') {
+        setRoleFilter('MODERATOR');
       } else {
         await fetchUsers(true);
       }
     } catch (err: any) {
-      setActionError(err.message || 'Failed to create staff account');
+      setActionError(err.message || 'Failed to create account');
     } finally {
       setIsSubmitting(false);
     }
@@ -774,6 +790,14 @@ export default function AdminUsersPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => openCreateStaffModal('USER')}
+            className="flex items-center gap-1.5 rounded-lg border border-amber-500/50 bg-amber-500 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-400 transition-all shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+          >
+            <UserPlus className="h-3.5 w-3.5 text-black" />
+            <span>+ Add User</span>
+          </button>
           <button
             type="button"
             onClick={() => openCreateStaffModal('SUPER_ADMIN')}
@@ -2556,18 +2580,32 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* 8. CREATE STAFF (ADMIN / MODERATOR) MODAL */}
+      {/* 8. CREATE ACCOUNT (USER / ADMIN / MODERATOR) MODAL */}
       {activeModal === 'CREATE_STAFF' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-[#070b14] p-6 shadow-2xl space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className={`p-2 rounded-xl border ${staffRole === 'SUPER_ADMIN' ? 'border-purple-500/30 bg-purple-500/10 text-purple-400' : 'border-blue-500/30 bg-blue-500/10 text-blue-400'}`}>
-                  {staffRole === 'SUPER_ADMIN' ? <ShieldAlert className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
+                <div
+                  className={`p-2 rounded-xl border ${
+                    staffRole === 'SUPER_ADMIN'
+                      ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
+                      : staffRole === 'MODERATOR'
+                      ? 'border-blue-500/30 bg-blue-500/10 text-blue-400'
+                      : 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                  }`}
+                >
+                  {staffRole === 'SUPER_ADMIN' ? (
+                    <ShieldAlert className="h-5 w-5" />
+                  ) : staffRole === 'MODERATOR' ? (
+                    <Shield className="h-5 w-5" />
+                  ) : (
+                    <UserPlus className="h-5 w-5" />
+                  )}
                 </div>
                 <div>
                   <h3 className="font-display text-base font-bold uppercase tracking-wider text-white">
-                    Add New {staffRole === 'SUPER_ADMIN' ? 'Platform Administrator' : 'Moderator Partner'}
+                    Add New {staffRole === 'SUPER_ADMIN' ? 'Platform Administrator' : staffRole === 'MODERATOR' ? 'Moderator Partner' : 'VIP Member Account'}
                   </h3>
                   <p className="text-[11px] text-slate-400">
                     Directly provision credentials saved to MongoDB with verified active status
@@ -2580,26 +2618,43 @@ export default function AdminUsersPage() {
             </div>
 
             <form onSubmit={handleCreateStaff} className="space-y-4">
-              {/* Role Toggle Selector */}
+              {/* Role Toggle Selector - 3 Roles: User, Admin, Moderator */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Assigned Account Role
+                  Assigned Account Role *
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStaffRole('USER');
+                      setStaffReason('Direct Member / VIP account provisioning via User Management');
+                    }}
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
+                      staffRole === 'USER'
+                        ? 'border-amber-500 bg-amber-500/20 text-amber-300 shadow-md shadow-amber-500/10 font-black'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <UserCheck className="h-4 w-4" />
+                    <span>VIP User</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       setStaffRole('SUPER_ADMIN');
                       setStaffCommissionRate(10);
+                      setStaffReason('Direct Administrator provisioning via User Management');
                     }}
-                    className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold uppercase tracking-wider transition-all ${
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
                       staffRole === 'SUPER_ADMIN'
-                        ? 'border-purple-500 bg-purple-500/20 text-purple-300 shadow-md shadow-purple-500/10'
-                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                        ? 'border-purple-500 bg-purple-500/20 text-purple-300 shadow-md shadow-purple-500/10 font-black'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:text-white'
                     }`}
                   >
                     <ShieldAlert className="h-4 w-4" />
-                    <span>Administrator</span>
+                    <span>Admin</span>
                   </button>
 
                   <button
@@ -2607,11 +2662,12 @@ export default function AdminUsersPage() {
                     onClick={() => {
                       setStaffRole('MODERATOR');
                       setStaffCommissionRate(50);
+                      setStaffReason('Direct Moderator provisioning via User Management');
                     }}
-                    className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold uppercase tracking-wider transition-all ${
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold uppercase tracking-wider transition-all ${
                       staffRole === 'MODERATOR'
-                        ? 'border-blue-500 bg-blue-500/20 text-blue-300 shadow-md shadow-blue-500/10'
-                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
+                        ? 'border-blue-500 bg-blue-500/20 text-blue-300 shadow-md shadow-blue-500/10 font-black'
+                        : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:text-white'
                     }`}
                   >
                     <Shield className="h-4 w-4" />
@@ -2619,6 +2675,30 @@ export default function AdminUsersPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Initial VIP Subscription Pass (If USER) */}
+              {staffRole === 'USER' && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-300">
+                    Initial VIP Subscription Pass (Optional)
+                  </label>
+                  <select
+                    value={staffPlanId}
+                    onChange={(e) => setStaffPlanId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                  >
+                    <option value="none">No Initial Subscription (Free / Unsubscribed)</option>
+                    {adminPlans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.duration?.value || p.durationDays || 30} {p.duration?.unit?.toLowerCase() || 'days'}) - ${p.priceUsd || (p.priceCents / 100)} USD
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-400">
+                    Select a pass to immediately activate VIP prediction tool access for this user upon creation.
+                  </p>
+                </div>
+              )}
 
               {/* Full Name */}
               <div>
@@ -2638,14 +2718,14 @@ export default function AdminUsersPage() {
               {/* Official Email */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
-                  Official Email Address *
+                  Email Address *
                 </label>
                 <input
                   type="email"
                   required
                   value={staffEmail}
                   onChange={(e) => setStaffEmail(e.target.value)}
-                  placeholder="e.g. staff@accuracy.tools"
+                  placeholder="e.g. user@accuracy.tools"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
@@ -2724,7 +2804,7 @@ export default function AdminUsersPage() {
                 </div>
               )}
 
-              {/* Staff Notes */}
+              {/* Remarks / Notes */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
                   Internal Remarks / Notes <span className="text-slate-500 font-normal">(Optional)</span>
@@ -2733,7 +2813,7 @@ export default function AdminUsersPage() {
                   type="text"
                   value={staffNotes}
                   onChange={(e) => setStaffNotes(e.target.value)}
-                  placeholder="e.g. Telegram: @partner_mod, Region: UK"
+                  placeholder="e.g. Telegram: @telegram_handle, Country: UK"
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
@@ -2765,21 +2845,25 @@ export default function AdminUsersPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-lg transition-all disabled:opacity-50 ${
+                  className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 ${
                     staffRole === 'SUPER_ADMIN'
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-purple-600/30'
-                      : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-600/30'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/30'
+                      : staffRole === 'MODERATOR'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-lg shadow-blue-600/30'
+                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black shadow-lg shadow-amber-500/30 font-bold'
                   }`}
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                       <span>Saving to MongoDB...</span>
                     </>
                   ) : (
                     <>
                       <UserPlus className="h-4 w-4" />
-                      <span>Create {staffRole === 'SUPER_ADMIN' ? 'Administrator' : 'Moderator'}</span>
+                      <span>
+                        Create {staffRole === 'SUPER_ADMIN' ? 'Administrator' : staffRole === 'MODERATOR' ? 'Moderator' : 'User'} Account
+                      </span>
                     </>
                   )}
                 </button>
